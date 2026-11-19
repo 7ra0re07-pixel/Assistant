@@ -35,6 +35,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html, body { min-height: 100%; }
 body {
   margin: 0;
@@ -190,6 +191,28 @@ button { cursor: pointer; }
 .grid button.today.has::after { background: var(--accent-ink); }
 .ev-form { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; }
 .ev-day { font-size: 13px; color: var(--muted); margin: 0; }
+/* maison */
+.house { display: flex; flex-direction: column; gap: 16px; }
+.lamp-row { display: flex; align-items: center; gap: 18px; }
+.lamp {
+  width: 92px; height: 92px; border-radius: 50%; flex: none; border: 1px solid var(--line);
+  background: var(--glass-hi); display: grid; place-items: center; transition: background .3s, box-shadow .3s;
+}
+.lamp svg { width: 40px; height: 40px; }
+.lamp[aria-pressed="true"] { background: #ffd27a; color: #3a2400; box-shadow: 0 0 60px -6px rgba(255, 200, 100, .7); }
+.lamp-info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.lamp-name { font-family: var(--font-display); font-size: 20px; font-weight: 500; margin: 0; }
+.lamp-state { color: var(--muted); font-size: 14px; margin: 0; }
+.lamp-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.app-btn { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); text-decoration: none; color: var(--fg); font-weight: 500; min-width: 0; }
+.app-btn:hover { background: var(--glass-hi); }
+.app-btn .ic { width: 40px; height: 40px; border-radius: 12px; font-size: 16px; flex: none; }
+.say { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--glass); font-size: 14px; color: var(--muted); }
+.say b { color: var(--fg); font-weight: 500; }
+.cfg { display: flex; flex-direction: column; gap: 8px; }
+.cfg label { font-size: 13px; color: var(--muted); }
+.cfg p { margin: 0; font-size: 13px; color: var(--muted); }
 .ev-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ev-list li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border-radius: 12px; font-size: 14px; }
 .ev-list .h { color: var(--sky); font-variant-numeric: tabular-nums; font-size: 13px; }
@@ -372,6 +395,38 @@ button { cursor: pointer; }
       <button class="btn primary" type="submit">Ajouter</button>
     </form>
   </section>
+  <section class="w house span-5" data-id="home" aria-label="Maison">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <h2 class="label"><span>Maison</span><button class="link-btn" id="houseCfgBtn" type="button">Configurer</button></h2>
+    <div class="lamp-row">
+      <button class="lamp" id="lampBtn" type="button" aria-pressed="false" aria-label="Allumer ou éteindre la lampe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>
+      </button>
+      <div class="lamp-info">
+        <p class="lamp-name" id="lampName">Lampe Tapo</p>
+        <p class="lamp-state" id="lampState">Pas encore reliée : touche « Configurer »</p>
+        <div class="lamp-btns">
+          <button class="btn primary" type="button" id="lampOn">Allumer</button>
+          <button class="btn" type="button" id="lampOff">Éteindre</button>
+        </div>
+      </div>
+    </div>
+    <div class="app-row">
+      <a class="app-btn" id="openAlexa" href="intent://#Intent;package=com.amazon.dee.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.amazon.dee.app;end"><span class="ic" style="background:linear-gradient(160deg,#2fc2ef,#1a8fd0)">A</span><span>Ouvrir Alexa</span></a>
+      <a class="app-btn" id="openTapo" href="intent://#Intent;package=com.tplink.iot;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.tplink.iot;end"><span class="ic" style="background:linear-gradient(160deg,#4a7bff,#2b55d6)">T</span><span>Ouvrir Tapo</span></a>
+    </div>
+    <p class="say">Avec ta voix : <b>« Alexa, allume <span class="lampSay">la lampe</span> »</b> ou <b>« Alexa, éteins <span class="lampSay">la lampe</span> »</b></p>
+    <form class="cfg" id="houseCfg" hidden>
+      <label for="lampNameIn">Nom de la lampe (comme dans l'application Alexa)</label>
+      <input class="field" id="lampNameIn" type="text" placeholder="ex. Lampe salon">
+      <label for="urlOn">Lien « Allumer » (Voice Monkey ou IFTTT)</label>
+      <input class="field" id="urlOn" type="url" placeholder="https://…">
+      <label for="urlOff">Lien « Éteindre »</label>
+      <input class="field" id="urlOff" type="url" placeholder="https://…">
+      <p>Ces liens restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </form>
+  </section>
 </main>
 
 <nav class="dock" id="dock" aria-label="Dock"></nav>
@@ -539,9 +594,42 @@ button { cursor: pointer; }
     });
   })();
 
+  // ---------- maison : lampe Tapo via Alexa ----------
+  let house = store.get("tab.house", { name: "", on: "", off: "", state: null });
+  function renderHouse() {
+    const nm = house.name || "la lampe";
+    $("lampName").textContent = house.name || "Lampe Tapo";
+    document.querySelectorAll(".lampSay").forEach((e) => { e.textContent = nm.toLowerCase(); });
+    const ready = !!(house.on && house.off);
+    $("lampState").textContent = !ready ? "Pas encore reliée : touche « Configurer »" : house.state === true ? "Allumée" : house.state === false ? "Éteinte" : "Prête";
+    $("lampBtn").setAttribute("aria-pressed", String(house.state === true));
+  }
+  async function lamp(on) {
+    const url = on ? house.on : house.off;
+    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord les liens dans « Configurer »"); return; }
+    try {
+      await fetch(url, { method: "GET", mode: "no-cors" });
+      house.state = on; store.set("tab.house", house); renderHouse();
+      toast(on ? "Lampe allumée" : "Lampe éteinte");
+    } catch (e) { toast("La commande n'est pas passée. Vérifie ta connexion ou le lien."); }
+  }
+  $("lampOn").addEventListener("click", () => lamp(true));
+  $("lampOff").addEventListener("click", () => lamp(false));
+  $("lampBtn").addEventListener("click", () => lamp(house.state !== true));
+  $("houseCfgBtn").addEventListener("click", () => {
+    const f = $("houseCfg"); f.hidden = !f.hidden;
+    $("lampNameIn").value = house.name; $("urlOn").value = house.on; $("urlOff").value = house.off;
+  });
+  $("houseCfg").addEventListener("submit", (e) => {
+    e.preventDefault();
+    house.name = $("lampNameIn").value.trim(); house.on = $("urlOn").value.trim(); house.off = $("urlOff").value.trim();
+    store.set("tab.house", house); $("houseCfg").hidden = true; renderHouse(); toast("Réglages de la lampe enregistrés");
+  });
+  renderHouse();
+
   // ---------- disposition des widgets ----------
   const home = $("home");
-  const DEFAULT_ORDER = ["clock", "weather", "video", "agenda", "music", "custom"];
+  const DEFAULT_ORDER = ["clock", "weather", "video", "agenda", "home", "music", "custom"];
   let order = store.get("tab.order", DEFAULT_ORDER).filter((id) => DEFAULT_ORDER.includes(id));
   DEFAULT_ORDER.forEach((id) => { if (!order.includes(id)) order.push(id); });
   function applyOrder() {
