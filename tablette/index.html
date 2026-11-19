@@ -12,31 +12,36 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;500;600&family=Inter:wght@400;500;600&display=swap">
 <style>
-/* Layout: écran d'accueil paysage en grille — horloge + météo en haut, divertissement + agenda dessous ; une colonne sur téléphone. Look sombre assumé. */
+/* Layout: barre d'état en haut, grille de widgets en verre (ordre modifiable), dock flottant en bas, centre de contrôle qui glisse depuis le haut. Look sombre assumé. */
 :root {
   --bg: #0b0f1a;
-  --bg-glow-1: rgba(255, 140, 90, 0.16);
-  --bg-glow-2: rgba(70, 130, 255, 0.14);
-  --surface: rgba(255, 255, 255, 0.045);
-  --surface-hi: rgba(255, 255, 255, 0.085);
-  --line: rgba(255, 255, 255, 0.09);
+  --glow-1: rgba(255, 140, 90, 0.22);
+  --glow-2: rgba(70, 130, 255, 0.20);
+  --glow-3: rgba(180, 90, 255, 0.10);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-hi: rgba(255, 255, 255, 0.11);
+  --glass-strong: rgba(22, 27, 42, 0.72);
+  --line: rgba(255, 255, 255, 0.10);
   --fg: #eef1f8;
-  --muted: #8b93a8;
+  --muted: #8f97ab;
   --accent: #ff9a62;
   --accent-ink: #1a0f08;
   --sky: #7fb4ff;
+  --ok: #5fd39a;
   --font-display: "Outfit", "Segoe UI", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --r: 22px;
+  --r: 26px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: dark;
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { min-height: 100%; }
 body {
   margin: 0;
   background:
-    radial-gradient(900px 600px at 0% 0%, var(--bg-glow-1), transparent 60%),
-    radial-gradient(900px 700px at 100% 100%, var(--bg-glow-2), transparent 60%),
+    radial-gradient(900px 640px at 0% 0%, var(--glow-1), transparent 60%),
+    radial-gradient(900px 720px at 100% 100%, var(--glow-2), transparent 60%),
+    radial-gradient(700px 500px at 70% 20%, var(--glow-3), transparent 60%),
     var(--bg);
   background-attachment: fixed;
   color: var(--fg);
@@ -44,193 +49,294 @@ body {
   font-size: 15px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-}
-.wrap {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 24px 40px;
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 18px;
-}
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  padding: 22px 24px;
-  min-width: 0;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-.label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  transition: background .6s var(--ease);
+  overscroll-behavior-y: none;
 }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Horloge */
-.clock { grid-column: span 7; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; background: transparent; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; padding-left: 4px; }
-.greet { font-family: var(--font-display); font-weight: 300; font-size: 22px; color: var(--muted); margin: 0; }
-.time {
-  font-family: var(--font-display);
-  font-weight: 200;
-  font-size: clamp(72px, 13vw, 168px);
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
+/* ---------- barre d'état ---------- */
+.status {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  max-width: 1280px; margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 6px;
+  font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums;
 }
-.time .sec { font-size: 0.28em; color: var(--accent); font-weight: 300; letter-spacing: 0; margin-left: 0.2em; vertical-align: 0.35em; }
-.date { font-family: var(--font-display); font-weight: 500; font-size: 22px; margin: 0; text-transform: capitalize; }
-.next { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
-.next b { color: var(--fg); font-weight: 500; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.status .left, .status .right { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.status .muted { color: var(--muted); }
+.handle {
+  border: 0; background: var(--glass); border: 1px solid var(--line);
+  border-radius: 999px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--muted);
+}
+.handle:hover { color: var(--fg); background: var(--glass-hi); }
+.handle svg { width: 14px; height: 14px; }
 
-/* Météo */
-.weather { grid-column: span 5; display: flex; flex-direction: column; gap: 16px; }
+/* ---------- grille ---------- */
+.home {
+  max-width: 1280px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 150px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  align-items: start;
+  gap: 18px;
+}
+.w {
+  position: relative;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  min-width: 0;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 20px 50px -30px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+  animation: rise .7s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+@keyframes rise { from { transform: translateY(14px) scale(.985); opacity: .5; } to { transform: none; opacity: 1; } }
+.w.span-7 { grid-column: span 7; }
+.w.span-5 { grid-column: span 5; }
+.w.span-12 { grid-column: span 12; }
+.label {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.link-btn { background: none; border: 0; color: var(--muted); font-size: 12px; letter-spacing: .03em; text-transform: none; padding: 2px 6px; border-radius: 8px; }
+.link-btn:hover { color: var(--fg); background: var(--glass-hi); }
+.btn { background: var(--glass-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; font-weight: 500; }
+.btn:hover { background: rgba(255,255,255,.15); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.field { min-width: 0; background: var(--glass-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
+
+/* mode édition */
+.editing .w { animation: wiggle .45s ease-in-out infinite alternate; }
+.editing .w:nth-child(even) { animation-direction: alternate-reverse; }
+@keyframes wiggle { from { transform: rotate(-.35deg); } to { transform: rotate(.35deg); } }
+.move { display: none; position: absolute; top: -12px; right: 14px; gap: 6px; z-index: 2; }
+.editing .move { display: flex; }
+.move button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 16px; }
+.edit-bar { display: none; position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 40; gap: 10px; align-items: center; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 16px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 14px; }
+.editing .edit-bar { display: flex; }
+.edit-bar .btn { border-radius: 999px; padding: 6px 14px; }
+
+/* ---------- horloge ---------- */
+.clock { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding-left: 6px; }
+.greet { font-family: var(--font-display); font-weight: 300; font-size: 22px; color: var(--muted); margin: 0; }
+.time { font-family: var(--font-display); font-weight: 200; font-size: clamp(76px, 13vw, 172px); line-height: .9; letter-spacing: -.045em; margin: 0; font-variant-numeric: tabular-nums; }
+.time .sec { font-size: .26em; color: var(--accent); font-weight: 300; letter-spacing: 0; margin-left: .2em; vertical-align: .4em; }
+.date { font-family: var(--font-display); font-weight: 500; font-size: 22px; margin: 4px 0 0; }
+.clock-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 9px; background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; color: var(--muted); min-width: 0; }
+.chip b { color: var(--fg); font-weight: 500; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.speak {
+  display: inline-flex; align-items: center; gap: 9px; border: 0; border-radius: 999px; padding: 8px 16px 8px 12px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 14px;
+}
+.speak svg { width: 18px; height: 18px; }
+.speak.on { background: var(--fg); }
+
+/* ---------- météo ---------- */
+.weather { display: flex; flex-direction: column; gap: 16px; }
 .wnow { display: flex; align-items: center; gap: 18px; }
-.wnow svg { width: 72px; height: 72px; flex: none; }
-.wtemp { font-family: var(--font-display); font-weight: 300; font-size: 56px; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
+.wnow svg { width: 76px; height: 76px; flex: none; }
+.wtemp { font-family: var(--font-display); font-weight: 300; font-size: 58px; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
 .wdesc { margin: 4px 0 0; color: var(--muted); }
 .wdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.wday { background: var(--surface); border-radius: 14px; padding: 10px 6px; text-align: center; font-size: 13px; }
+.wday { background: var(--glass); border-radius: 16px; padding: 10px 4px; text-align: center; font-size: 13px; }
 .wday svg { width: 26px; height: 26px; display: block; margin: 6px auto; }
 .wday .d { color: var(--muted); text-transform: capitalize; }
 .wday .t { font-variant-numeric: tabular-nums; }
 .wday .t span { color: var(--muted); }
 .city-form { display: flex; gap: 8px; flex-wrap: wrap; }
-.city-form input { flex: 1 1 140px; min-width: 0; background: var(--surface-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
-.btn { background: var(--surface-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; font-weight: 500; }
-.btn:hover { background: rgba(255,255,255,0.13); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.link-btn { background: none; border: 0; color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: none; padding: 2px 4px; border-radius: 6px; }
-.link-btn:hover { color: var(--fg); }
+.city-form .field { flex: 1 1 140px; }
 .wmsg { color: var(--muted); margin: 0; font-size: 14px; }
 
-/* Raccourcis */
-.apps { grid-column: span 7; }
-.group + .group { margin-top: 22px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
-.tile {
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
-  text-decoration: none; color: var(--fg);
-  padding: 14px 6px 12px; border-radius: 18px;
-  transition: background .15s, transform .15s;
-  position: relative;
-}
-.tile:hover { background: var(--surface-hi); }
-.tile:active { transform: scale(0.96); }
-.tile .ic {
-  width: 58px; height: 58px; border-radius: 17px;
-  display: grid; place-items: center;
-  font-family: var(--font-display); font-weight: 600; font-size: 24px;
-  color: #fff;
-  box-shadow: 0 8px 22px -10px rgba(0,0,0,.7);
-}
+/* ---------- applis ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 9px; text-decoration: none; color: var(--fg); padding: 12px 4px 10px; border-radius: 18px; transition: background .15s, transform .2s var(--ease); position: relative; }
+.tile:hover { background: var(--glass-hi); }
+.tile:active { transform: scale(.92); }
+.ic { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 600; font-size: 23px; color: #fff; box-shadow: 0 10px 24px -12px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.18); }
 .tile .nm { font-size: 13px; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
-.tile .rm {
-  position: absolute; top: 4px; right: 8px; width: 22px; height: 22px; border-radius: 50%;
-  border: 0; background: rgba(0,0,0,.55); color: #fff; font-size: 14px; line-height: 22px; padding: 0;
-}
-.add-form { display: grid; grid-template-columns: 1fr 1.6fr auto auto; gap: 8px; margin-top: 14px; }
-.add-form input { min-width: 0; background: var(--surface-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
+.tile .rm { position: absolute; top: 4px; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; line-height: 22px; padding: 0; }
+.add-form { display: grid; grid-template-columns: 1fr 1.6fr auto; gap: 8px; margin-top: 12px; }
 
-/* Agenda */
-.agenda { grid-column: span 5; display: flex; flex-direction: column; gap: 14px; }
+/* ---------- agenda ---------- */
+.agenda { display: flex; flex-direction: column; gap: 14px; }
 .cal-head { display: flex; align-items: center; justify-content: space-between; }
 .cal-title { font-family: var(--font-display); font-weight: 500; font-size: 20px; text-transform: capitalize; margin: 0; }
 .nav { display: flex; gap: 6px; }
-.nav button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 16px; }
+.nav button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--glass); font-size: 16px; }
 .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; font-variant-numeric: tabular-nums; }
-.grid .wd { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; padding: 4px 0; }
-.grid button {
-  aspect-ratio: 1; max-width: 100%; border: 0; border-radius: 12px; background: transparent;
-  font-size: 14px; position: relative; padding: 0;
-}
-.grid button:hover { background: var(--surface-hi); }
-.grid button.out { color: rgba(139,147,168,.45); }
+.grid .wd { font-size: 11px; color: var(--muted); letter-spacing: .06em; padding: 4px 0; }
+.grid button { aspect-ratio: 1; max-width: 100%; border: 0; border-radius: 12px; background: transparent; font-size: 14px; position: relative; padding: 0; }
+.grid button:hover { background: var(--glass-hi); }
+.grid button.out { color: rgba(143,151,171,.45); }
 .grid button.today { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .grid button.sel:not(.today) { outline: 1px solid var(--accent); }
 .grid button.has::after { content: ""; position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--sky); }
 .grid button.today.has::after { background: var(--accent-ink); }
 .ev-form { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; }
-.ev-form input { min-width: 0; background: var(--surface-hi); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; }
 .ev-day { font-size: 13px; color: var(--muted); margin: 0; }
 .ev-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.ev-list li { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border-radius: 12px; font-size: 14px; }
+.ev-list li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border-radius: 12px; font-size: 14px; }
 .ev-list .h { color: var(--sky); font-variant-numeric: tabular-nums; font-size: 13px; }
 .ev-list .x { background: none; border: 0; color: var(--muted); font-size: 16px; padding: 0 4px; }
 .ev-empty { color: var(--muted); font-size: 14px; margin: 0; }
 .gcal { color: var(--muted); font-size: 13px; text-decoration: none; }
 .gcal:hover { color: var(--fg); }
-.sample { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+/* ---------- dock ---------- */
+.dock {
+  position: fixed; z-index: 25; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  display: flex; align-items: center; gap: 6px; padding: 8px;
+  max-width: calc(100% - 24px); overflow-x: auto; scrollbar-width: none;
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 28px;
+  backdrop-filter: blur(26px) saturate(160%); -webkit-backdrop-filter: blur(26px) saturate(160%);
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,.8);
+}
+.dock::-webkit-scrollbar { display: none; }
+.dock a, .dock button.dk { flex: none; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 20px; text-decoration: none; border: 0; background: transparent; transition: transform .25s var(--ease); }
+.dock a:hover, .dock button.dk:hover { transform: translateY(-6px) scale(1.08); }
+.dock .ic { width: 52px; height: 52px; border-radius: 16px; font-size: 21px; }
+.dock .sep { width: 1px; height: 40px; background: var(--line); margin: 0 4px; flex: none; }
+.dock .sys { background: var(--glass-hi); color: var(--fg); }
+.dock .sys svg { width: 24px; height: 24px; }
+
+/* ---------- centre de contrôle ---------- */
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(5,7,12,.45); opacity: 0; pointer-events: none; transition: opacity .35s var(--ease); }
+.cc {
+  position: fixed; z-index: 51; top: 0; right: 0;
+  width: min(440px, 100%);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-left: 16px; padding-bottom: 16px;
+  transform: translateY(-105%); transition: transform .45s var(--ease);
+  max-height: 100%; overflow-y: auto;
+}
+.cc-open .scrim { opacity: 1; pointer-events: auto; }
+.cc-open .cc { transform: none; }
+.cc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.cc-card {
+  background: var(--glass-strong); border: 1px solid var(--line); border-radius: 24px; padding: 14px;
+  backdrop-filter: blur(30px) saturate(160%); -webkit-backdrop-filter: blur(30px) saturate(160%);
+  min-width: 0;
+}
+.cc-card.s2 { grid-column: span 2; }
+.cc-card.s4 { grid-column: span 4; }
+.tog { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 10px; text-align: left; width: 100%; aspect-ratio: 1; border: 0; }
+.tog .ti { width: 40px; height: 40px; border-radius: 50%; background: var(--glass-hi); display: grid; place-items: center; }
+.tog .ti svg { width: 20px; height: 20px; }
+.tog .tl { font-size: 12px; line-height: 1.2; font-weight: 500; }
+.tog[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.tog[aria-pressed="true"] .ti { background: var(--accent); color: var(--accent-ink); }
+.cc-h { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.slider { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; border-radius: 14px; background: linear-gradient(90deg, var(--fg) var(--v, 100%), var(--glass-hi) var(--v, 100%)); outline: none; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: 40px; }
+.slider::-moz-range-thumb { width: 0; height: 40px; border: 0; }
+.slider:focus-visible { outline: 2px solid var(--accent); }
+.walls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.walls button { aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; }
+.walls button[aria-pressed="true"] { border-color: var(--fg); }
+.timer-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.timer-row button { flex: 1 1 0; min-width: 0; border: 1px solid var(--line); background: var(--glass-hi); border-radius: 12px; padding: 8px 4px; font-size: 13px; }
+.timer-left { font-family: var(--font-display); font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 4px 0 10px; }
+.cc-close { width: 100%; margin-top: 12px; border: 0; background: transparent; color: var(--muted); padding: 10px; font-size: 13px; }
+.voice-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 14px; }
+.switch { position: relative; width: 48px; height: 28px; border-radius: 999px; border: 0; background: var(--glass-hi); flex: none; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--fg); transition: transform .25s var(--ease); }
+.switch[aria-checked="true"] { background: var(--ok); }
+.switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+/* filtres écran */
+.dim { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: #000; opacity: 0; transition: opacity .2s; }
+.night { position: fixed; inset: 0; z-index: 61; pointer-events: none; background: #ff8a2a; mix-blend-mode: multiply; opacity: 0; transition: opacity .6s; }
+.night.on { opacity: .28; }
+
+/* toast */
+.toast { position: fixed; z-index: 70; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 14px); transform: translate(-50%, calc(-100% - 40px)); visibility: hidden; transition: transform .45s var(--ease), visibility 0s .45s; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 14px; max-width: calc(100% - 32px); }
+.toast.show { transform: translate(-50%, 0); visibility: visible; transition: transform .45s var(--ease); }
 
 @media (max-width: 900px) {
-  .clock, .weather, .apps, .agenda { grid-column: 1 / -1; }
+  .w.span-7, .w.span-5 { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) {
+  .w { padding: 18px 16px; }
   .add-form { grid-template-columns: 1fr 1fr; }
-  .wdays { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .add-form .btn { grid-column: span 2; }
   .wday { font-size: 12px; padding: 8px 2px; }
-  .panel { padding: 18px 16px; }
+  .wdays { gap: 4px; }
+  .status .hide-sm { display: none; }
+  .dock a, .dock button.dk { width: 52px; height: 52px; }
+  .dock .ic { width: 44px; height: 44px; font-size: 18px; border-radius: 14px; }
+  .cc-grid { gap: 10px; }
 }
-@media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 </style>
 
-<main class="wrap">
-  <section class="panel clock" aria-label="Heure">
+<header class="status" id="status">
+  <div class="left"><span id="sTime">--:--</span><span class="muted hide-sm" id="sDate"></span></div>
+  <div class="right">
+    <span class="muted" id="sWeather"></span>
+    <button class="handle" id="ccBtn" type="button" aria-label="Ouvrir le centre de contrôle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      Contrôle
+    </button>
+  </div>
+</header>
+
+<div class="edit-bar" role="status"><span>Déplace les widgets avec les flèches</span><button class="btn primary" type="button" id="editDone">Terminé</button></div>
+
+<main class="home" id="home">
+  <section class="w clock span-7" data-id="clock" aria-label="Heure">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
     <p class="greet" id="greet">Bonjour</p>
     <div>
       <p class="time" id="time">--:--<span class="sec">--</span></p>
       <p class="date" id="date"></p>
     </div>
-    <p class="next" id="next"><span class="dot"></span><span>Aucun rendez-vous prévu aujourd'hui</span></p>
+    <div class="clock-foot">
+      <button class="speak" id="speakBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <span>Écouter mon résumé</span>
+      </button>
+      <span class="chip" id="next"><span class="dot"></span><span>Aucun rendez-vous aujourd'hui</span></span>
+    </div>
   </section>
 
-  <section class="panel weather" aria-label="Météo">
+  <section class="w weather span-5" data-id="weather" aria-label="Météo">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
     <h2 class="label"><span>Météo <span id="wcity"></span></span><button class="link-btn" id="wchange" type="button">Changer de ville</button></h2>
     <div id="wbody"><p class="wmsg">Chargement de la météo…</p></div>
     <form class="city-form" id="cityForm" hidden>
-      <input id="cityInput" type="text" placeholder="Ta ville (ex. Lyon, Dakar…)" autocomplete="off" aria-label="Ville">
+      <input class="field" id="cityInput" type="text" placeholder="Ta ville (ex. Lyon, Dakar…)" autocomplete="off" aria-label="Ville">
       <button class="btn primary" type="submit">Valider</button>
       <button class="btn" type="button" id="geoBtn">Ma position</button>
     </form>
   </section>
 
-  <section class="panel apps" aria-label="Applications">
-    <div class="group">
-      <h2 class="label"><span>Films &amp; séries</span><button class="link-btn" id="editBtn" type="button">Modifier</button></h2>
-      <div class="tiles" id="tiles-video"></div>
-    </div>
-    <div class="group">
-      <h2 class="label"><span>Musique</span></h2>
-      <div class="tiles" id="tiles-music"></div>
-    </div>
-    <div class="group">
-      <h2 class="label"><span>Mes raccourcis</span></h2>
-      <div class="tiles" id="tiles-custom"></div>
-      <form class="add-form" id="addForm" hidden>
-        <input id="addName" type="text" placeholder="Nom" required aria-label="Nom du raccourci">
-        <input id="addUrl" type="text" placeholder="Adresse (ex. instagram.com)" required aria-label="Adresse du site">
-        <button class="btn primary" type="submit">Ajouter</button>
-        <button class="btn" type="button" id="doneBtn">Terminé</button>
-      </form>
-    </div>
+  <section class="w span-7" data-id="video" aria-label="Films et séries">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <h2 class="label"><span>Films &amp; séries</span></h2>
+    <div class="tiles" id="tiles-video"></div>
   </section>
 
-  <section class="panel agenda" aria-label="Agenda">
+  <section class="w agenda span-5" data-id="agenda" aria-label="Agenda">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
     <div class="cal-head">
       <p class="cal-title" id="calTitle"></p>
       <div class="nav">
@@ -242,18 +348,86 @@ button { cursor: pointer; }
     <p class="ev-day" id="evDay"></p>
     <ul class="ev-list" id="evList"></ul>
     <form class="ev-form" id="evForm">
-      <input id="evTime" type="time" aria-label="Heure">
-      <input id="evText" type="text" placeholder="Ajouter un rendez-vous…" required aria-label="Rendez-vous">
+      <input class="field" id="evTime" type="time" aria-label="Heure">
+      <input class="field" id="evText" type="text" placeholder="Ajouter un rendez-vous…" required aria-label="Rendez-vous">
       <button class="btn primary" type="submit">Ajouter</button>
     </form>
     <a class="gcal" href="https://calendar.google.com" target="_blank" rel="noopener">Ouvrir Google Agenda ↗</a>
   </section>
+
+  <section class="w span-7" data-id="music" aria-label="Musique">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <h2 class="label"><span>Musique</span></h2>
+    <div class="tiles" id="tiles-music"></div>
+  </section>
+
+  <section class="w span-5" data-id="custom" aria-label="Mes raccourcis">
+    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <h2 class="label"><span>Mes raccourcis</span><button class="link-btn" id="customEdit" type="button">Modifier</button></h2>
+    <div class="tiles" id="tiles-custom"></div>
+    <form class="add-form" id="addForm" hidden>
+      <input class="field" id="addName" type="text" placeholder="Nom" required aria-label="Nom du raccourci">
+      <input class="field" id="addUrl" type="text" placeholder="Adresse (ex. instagram.com)" required aria-label="Adresse du site">
+      <button class="btn primary" type="submit">Ajouter</button>
+    </form>
+  </section>
 </main>
+
+<nav class="dock" id="dock" aria-label="Dock"></nav>
+
+<div class="scrim" id="scrim"></div>
+<aside class="cc" id="cc" aria-label="Centre de contrôle" aria-hidden="true">
+  <div class="cc-grid">
+    <div class="cc-card s4">
+      <p class="cc-h"><span>Luminosité</span><span id="briVal">100 %</span></p>
+      <input class="slider" id="bri" type="range" min="30" max="100" value="100" aria-label="Luminosité">
+    </div>
+    <button class="cc-card tog" id="tNight" type="button" aria-pressed="false">
+      <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span>
+      <span class="tl">Mode nuit</span>
+    </button>
+    <button class="cc-card tog" id="tFull" type="button" aria-pressed="false">
+      <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
+      <span class="tl">Plein écran</span>
+    </button>
+    <button class="cc-card tog" id="tWake" type="button" aria-pressed="false">
+      <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg></span>
+      <span class="tl">Écran toujours allumé</span>
+    </button>
+    <button class="cc-card tog" id="tEdit" type="button" aria-pressed="false">
+      <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span>
+      <span class="tl">Disposer les widgets</span>
+    </button>
+    <div class="cc-card s2">
+      <p class="cc-h"><span>Minuteur</span><span>min</span></p>
+      <p class="timer-left" id="timerLeft">00:00</p>
+      <div class="timer-row" id="timerRow">
+        <button type="button" data-min="5">5</button>
+        <button type="button" data-min="15">15</button>
+        <button type="button" data-min="30">30</button>
+        <button type="button" data-min="0">Stop</button>
+      </div>
+    </div>
+    <div class="cc-card s2">
+      <p class="cc-h"><span>Fond</span></p>
+      <div class="walls" id="walls"></div>
+    </div>
+    <div class="cc-card s4">
+      <p class="cc-h"><span>Synthèse vocale</span></p>
+      <div class="voice-row"><span>Lire le résumé à chaque ouverture le matin</span><button class="switch" id="morningSw" type="button" role="switch" aria-checked="false" aria-label="Résumé du matin automatique"></button></div>
+      <div class="voice-row" style="margin-top:12px"><span>Vitesse de la voix</span><input id="rate" type="range" min="0.7" max="1.4" step="0.1" value="1" aria-label="Vitesse de la voix" style="width:50%"></div>
+    </div>
+  </div>
+  <button class="cc-close" id="ccClose" type="button">Fermer</button>
+</aside>
+
+<div class="dim" id="dim"></div>
+<div class="night" id="night"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
   "use strict";
-  // ---------- stockage sûr ----------
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -261,18 +435,23 @@ button { cursor: pointer; }
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, "0");
   const keyOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200); }
 
   // ---------- horloge ----------
   function tick() {
     const now = new Date();
     $("time").innerHTML = pad(now.getHours()) + ":" + pad(now.getMinutes()) + '<span class="sec">' + pad(now.getSeconds()) + "</span>";
-    $("date").textContent = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("sTime").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+    const ds = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+    $("sDate").textContent = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
     const h = now.getHours();
     $("greet").textContent = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
   }
   tick(); setInterval(tick, 1000);
 
-  // ---------- raccourcis ----------
+  // ---------- applis ----------
   const APPS = {
     video: [
       { n: "Netflix", u: "https://www.netflix.com", c: "#b20710", l: "N" },
@@ -293,16 +472,15 @@ button { cursor: pointer; }
     { n: "Gmail", u: "https://mail.google.com", c: "#c5402f", l: "M" },
     { n: "Photos", u: "https://photos.google.com", c: "#d49a1a", l: "P" }
   ]);
-  let editing = false;
+  let customEditing = false;
   const PALETTE = ["#3b6fd8", "#c5402f", "#1aa34a", "#7a3cff", "#d49a1a", "#1b9aa6", "#c2347e", "#555c6e"];
-
+  function icon(a) { const ic = document.createElement("span"); ic.className = "ic"; ic.style.background = "linear-gradient(160deg, " + a.c + "ee, " + a.c + ")"; ic.textContent = a.l; return ic; }
   function tile(a, removable, idx) {
     const el = document.createElement("a");
     el.className = "tile"; el.href = a.u; el.target = "_blank"; el.rel = "noopener";
-    const ic = document.createElement("span"); ic.className = "ic"; ic.style.background = a.c; ic.textContent = a.l;
     const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = a.n;
-    el.append(ic, nm);
-    if (removable && editing) {
+    el.append(icon(a), nm);
+    if (removable && customEditing) {
       const rm = document.createElement("button"); rm.className = "rm"; rm.type = "button"; rm.textContent = "×";
       rm.setAttribute("aria-label", "Retirer " + a.n);
       rm.addEventListener("click", (e) => { e.preventDefault(); custom.splice(idx, 1); store.set("tab.custom", custom); renderApps(); });
@@ -314,24 +492,64 @@ button { cursor: pointer; }
     $("tiles-video").replaceChildren(...APPS.video.map((a) => tile(a)));
     $("tiles-music").replaceChildren(...APPS.music.map((a) => tile(a)));
     $("tiles-custom").replaceChildren(...custom.map((a, i) => tile(a, true, i)));
-    $("addForm").hidden = !editing;
-    $("editBtn").textContent = editing ? "Terminé" : "Modifier";
+    $("addForm").hidden = !customEditing;
+    $("customEdit").textContent = customEditing ? "Terminé" : "Modifier";
   }
-  $("editBtn").addEventListener("click", () => { editing = !editing; renderApps(); });
-  $("doneBtn").addEventListener("click", () => { editing = false; renderApps(); });
+  $("customEdit").addEventListener("click", () => { customEditing = !customEditing; renderApps(); });
   $("addForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const n = $("addName").value.trim(); let u = $("addUrl").value.trim();
     if (!n || !u) return;
     if (!/^https?:\/\//i.test(u)) u = "https://" + u;
     custom.push({ n, u, c: PALETTE[custom.length % PALETTE.length], l: n.slice(0, 1).toUpperCase() });
-    store.set("tab.custom", custom);
-    $("addName").value = ""; $("addUrl").value = "";
-    renderApps();
+    store.set("tab.custom", custom); $("addName").value = ""; $("addUrl").value = "";
+    renderApps(); toast(n + " ajouté");
   });
   renderApps();
 
-  // ---------- météo (Open-Meteo, sans clé) ----------
+  // ---------- dock ----------
+  const SYS = {
+    speak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
+    cc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>'
+  };
+  (function buildDock() {
+    const d = $("dock");
+    [APPS.video[0], APPS.music[0], APPS.video[1], custom[0] || APPS.music[1], APPS.music[1]].forEach((a) => {
+      const l = document.createElement("a"); l.href = a.u; l.target = "_blank"; l.rel = "noopener"; l.title = a.n; l.setAttribute("aria-label", a.n);
+      l.appendChild(icon(a)); d.appendChild(l);
+    });
+    const sep = document.createElement("span"); sep.className = "sep"; d.appendChild(sep);
+    [["speak", "Écouter mon résumé", () => speakSummary()], ["cc", "Centre de contrôle", () => openCC(true)]].forEach(([k, label, fn]) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "dk"; b.setAttribute("aria-label", label); b.title = label;
+      const ic = document.createElement("span"); ic.className = "ic sys"; ic.innerHTML = SYS[k]; b.appendChild(ic);
+      b.addEventListener("click", fn); d.appendChild(b);
+    });
+  })();
+
+  // ---------- disposition des widgets ----------
+  const home = $("home");
+  const DEFAULT_ORDER = ["clock", "weather", "video", "agenda", "music", "custom"];
+  let order = store.get("tab.order", DEFAULT_ORDER).filter((id) => DEFAULT_ORDER.includes(id));
+  DEFAULT_ORDER.forEach((id) => { if (!order.includes(id)) order.push(id); });
+  function applyOrder() {
+    order.forEach((id, i) => { const el = home.querySelector('[data-id="' + id + '"]'); el.style.setProperty("--i", i); home.appendChild(el); });
+  }
+  applyOrder();
+  home.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mv]"); if (!b) return;
+    const id = b.closest(".w").dataset.id; const i = order.indexOf(id); const j = i + Number(b.dataset.mv);
+    if (j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]]; store.set("tab.order", order); applyOrder();
+  });
+  function setEditing(on) {
+    document.body.classList.toggle("editing", on);
+    $("tEdit").setAttribute("aria-pressed", String(on));
+    if (on) openCC(false);
+  }
+  $("tEdit").addEventListener("click", () => setEditing(!document.body.classList.contains("editing")));
+  $("editDone").addEventListener("click", () => setEditing(false));
+
+  // ---------- météo ----------
   const ICON = {
     sun: '<svg viewBox="0 0 48 48" fill="none" stroke="#ffc46b" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="9" fill="#ffc46b"/><path d="M24 4v5M24 39v5M4 24h5M39 24h5M9.9 9.9l3.5 3.5M34.6 34.6l3.5 3.5M9.9 38.1l3.5-3.5M34.6 13.4l3.5-3.5"/></svg>',
     partly: '<svg viewBox="0 0 48 48" fill="none"><circle cx="18" cy="18" r="8" fill="#ffc46b"/><path d="M16 38h20a8 8 0 0 0 0-16 11 11 0 0 0-20.5 3A6.5 6.5 0 0 0 16 38z" fill="#cfd6e6"/></svg>',
@@ -353,20 +571,21 @@ button { cursor: pointer; }
     if (c <= 86) return ["snow", "Averses de neige"];
     return ["storm", "Orage"];
   }
+  let lastWeather = null;
   function showCityForm(msg) {
     $("cityForm").hidden = false;
-    if (msg) $("wbody").innerHTML = '<p class="wmsg"></p>', $("wbody").firstChild.textContent = msg;
+    if (msg) { const p = document.createElement("p"); p.className = "wmsg"; p.textContent = msg; $("wbody").replaceChildren(p); }
   }
   async function loadWeather(loc) {
     $("wcity").textContent = loc.name ? "· " + loc.name : "";
     try {
       const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
         "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5";
-      const r = await fetch(url);
-      if (!r.ok) throw new Error();
+      const r = await fetch(url); if (!r.ok) throw new Error();
       const d = await r.json();
       const [ic, label] = wmo(d.current.weather_code);
-      let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + Math.round(d.current.temperature_2m) + '°</p>' +
+      lastWeather = { t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc.name };
+      let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
         '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
       html += '<div class="wdays">';
       d.daily.time.forEach((t, i) => {
@@ -375,9 +594,10 @@ button { cursor: pointer; }
           '<div class="t">' + Math.round(d.daily.temperature_2m_max[i]) + "° <span>" + Math.round(d.daily.temperature_2m_min[i]) + "°</span></div></div>";
       });
       $("wbody").innerHTML = html + "</div>";
+      $("sWeather").textContent = lastWeather.t + "° " + label.toLowerCase();
       $("cityForm").hidden = true;
     } catch (e) {
-      showCityForm("La météo n'a pas pu se charger ici. Ouvre cette page directement dans le navigateur de ta tablette (Chrome) pour l'avoir en direct.");
+      showCityForm("La météo n'a pas pu se charger ici. Ouvre cette page directement dans Chrome sur ta tablette pour l'avoir en direct.");
     }
   }
   async function findCity(q) {
@@ -385,26 +605,21 @@ button { cursor: pointer; }
       const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name=" + encodeURIComponent(q));
       const d = await r.json();
       if (!d.results || !d.results.length) { showCityForm("Ville introuvable. Vérifie l'orthographe."); return; }
-      const c = d.results[0];
-      const loc = { lat: c.latitude, lon: c.longitude, name: c.name };
+      const c = d.results[0]; const loc = { lat: c.latitude, lon: c.longitude, name: c.name };
       store.set("tab.loc", loc); loadWeather(loc);
-    } catch (e) {
-      showCityForm("La recherche de ville n'est pas disponible ici. Ouvre la page dans Chrome sur ta tablette.");
-    }
+    } catch (e) { showCityForm("La recherche de ville n'est pas disponible ici. Ouvre la page dans Chrome sur ta tablette."); }
   }
   function useGeo() {
     if (!navigator.geolocation) { showCityForm("Indique ta ville pour voir la météo."); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => { const loc = { lat: p.coords.latitude.toFixed(3), lon: p.coords.longitude.toFixed(3), name: "Ma position" }; store.set("tab.loc", loc); loadWeather(loc); },
-      () => showCityForm("Indique ta ville pour voir la météo."),
-      { timeout: 8000 }
-    );
+      () => showCityForm("Indique ta ville pour voir la météo."), { timeout: 8000 });
   }
   $("cityForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("cityInput").value.trim(); if (q) findCity(q); });
   $("geoBtn").addEventListener("click", useGeo);
   $("wchange").addEventListener("click", () => { $("cityForm").hidden = !$("cityForm").hidden; if (!$("cityForm").hidden) $("cityInput").focus(); });
-  const saved = store.get("tab.loc", null);
-  if (saved) loadWeather(saved); else useGeo();
+  const savedLoc = store.get("tab.loc", null);
+  if (savedLoc) loadWeather(savedLoc); else useGeo();
   setInterval(() => { const l = store.get("tab.loc", null); if (l) loadWeather(l); }, 30 * 60 * 1000);
 
   // ---------- agenda ----------
@@ -413,7 +628,6 @@ button { cursor: pointer; }
   let selected = keyOf(today);
   let events = store.get("tab.events", null);
   if (!events) {
-    // exemples pour montrer le fonctionnement — supprimables
     const t1 = new Date(today); t1.setDate(t1.getDate() + 2);
     const t2 = new Date(today); t2.setDate(t2.getDate() + 5);
     events = {};
@@ -422,7 +636,6 @@ button { cursor: pointer; }
     events[keyOf(t2)] = [{ h: "", t: "Anniversaire (exemple)" }];
   }
   const saveEv = () => store.set("tab.events", events);
-
   function renderCal() {
     $("calTitle").textContent = view.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     const g = $("grid"); g.replaceChildren();
@@ -443,13 +656,14 @@ button { cursor: pointer; }
     }
     renderEvents();
   }
+  const sortEv = (a, b) => (a.h || "99").localeCompare(b.h || "99");
   function renderEvents() {
     const [y, m, dd] = selected.split("-").map(Number);
     const sd = new Date(y, m - 1, dd);
     $("evDay").textContent = selected === keyOf(today) ? "Aujourd'hui" : sd.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-    const list = (events[selected] || []).slice().sort((a, b) => (a.h || "99").localeCompare(b.h || "99"));
+    const list = (events[selected] || []).slice().sort(sortEv);
     const ul = $("evList"); ul.replaceChildren();
-    if (!list.length) { const li = document.createElement("p"); li.className = "ev-empty"; li.textContent = "Rien de prévu ce jour-là."; ul.appendChild(li); }
+    if (!list.length) { const p = document.createElement("p"); p.className = "ev-empty"; p.textContent = "Rien de prévu ce jour-là."; ul.appendChild(p); }
     list.forEach((ev) => {
       const li = document.createElement("li");
       const h = document.createElement("span"); h.className = "h"; h.textContent = ev.h || "Journée";
@@ -459,11 +673,12 @@ button { cursor: pointer; }
       li.append(h, t, x); ul.appendChild(li);
     });
   }
+  function todayEvents() { return (events[keyOf(new Date())] || []).slice().sort(sortEv); }
   function updateNext() {
     const now = new Date(); const hm = pad(now.getHours()) + ":" + pad(now.getMinutes());
-    const list = (events[keyOf(now)] || []).filter((e) => !e.h || e.h >= hm).sort((a, b) => (a.h || "").localeCompare(b.h || ""));
+    const list = todayEvents().filter((e) => !e.h || e.h >= hm);
     const el = $("next").lastElementChild;
-    if (list.length) { el.innerHTML = "Prochain : <b></b>"; el.querySelector("b").textContent = (list[0].h ? list[0].h + " · " : "") + list[0].t; }
+    if (list.length) { el.textContent = "Prochain : "; const b = document.createElement("b"); b.textContent = (list[0].h ? list[0].h + " · " : "") + list[0].t; el.appendChild(b); }
     else el.textContent = "Aucun autre rendez-vous aujourd'hui";
   }
   $("prevM").addEventListener("click", () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); renderCal(); });
@@ -473,9 +688,179 @@ button { cursor: pointer; }
     const t = $("evText").value.trim(); if (!t) return;
     (events[selected] = events[selected] || []).push({ h: $("evTime").value, t });
     saveEv(); $("evText").value = ""; $("evTime").value = "";
-    renderCal(); updateNext();
+    renderCal(); updateNext(); toast("Rendez-vous ajouté");
   });
   renderCal(); updateNext(); setInterval(updateNext, 60000);
+
+  // ---------- synthèse vocale ----------
+  let rate = store.get("tab.rate", 1);
+  $("rate").value = rate;
+  $("rate").addEventListener("input", (e) => { rate = Number(e.target.value); store.set("tab.rate", rate); });
+  let ttsCap = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("tts").then((t) => { ttsCap = t; }).catch(() => {});
+  }
+  function hourWords(d) {
+    const h = d.getHours(), m = d.getMinutes();
+    const hs = h === 0 ? "minuit" : h === 12 ? "midi" : h + (h === 1 ? " heure" : " heures");
+    return "il est " + hs + (m ? " " + m : "");
+  }
+  function buildSummary() {
+    const now = new Date();
+    const parts = [];
+    const h = now.getHours();
+    parts.push((h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir") + ".");
+    parts.push(hourWords(now).replace(/^i/, "I") + ".");
+    parts.push("Nous sommes " + now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + ".");
+    if (lastWeather) parts.push("Météo" + (lastWeather.city && lastWeather.city !== "Ma position" ? " à " + lastWeather.city : "") + " : " + lastWeather.t + " degrés, " + lastWeather.label.toLowerCase() + ". Maximum " + lastWeather.max + ", minimum " + lastWeather.min + ".");
+    const ev = todayEvents();
+    if (ev.length) {
+      parts.push("Aujourd'hui, tu as " + ev.length + (ev.length > 1 ? " rendez-vous : " : " rendez-vous : ") +
+        ev.map((e) => (e.h ? "à " + e.h.replace(":", " heures ").replace(/ 00$/, "") + ", " : "") + e.t.replace(/\(exemple\)/g, "")).join(" ; ") + ".");
+    } else parts.push("Tu n'as aucun rendez-vous aujourd'hui.");
+    return parts.join(" ");
+  }
+  let speaking = false;
+  function setSpeaking(on) {
+    speaking = on;
+    $("speakBtn").classList.toggle("on", on);
+    $("speakBtn").lastElementChild.textContent = on ? "Arrêter la lecture" : "Écouter mon résumé";
+  }
+  function frVoice() {
+    const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    return vs.find((v) => /^fr(-|_)FR/i.test(v.lang)) || vs.find((v) => /^fr/i.test(v.lang)) || null;
+  }
+  function say(text) {
+    if (window.speechSynthesis && typeof SpeechSynthesisUtterance !== "undefined") {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "fr-FR"; u.rate = rate; const v = frVoice(); if (v) u.voice = v;
+      u.onend = u.onerror = () => setSpeaking(false);
+      setSpeaking(true); speechSynthesis.speak(u);
+      return;
+    }
+    if (ttsCap) {
+      setSpeaking(true);
+      ttsCap.speak(text, { language: "fr", rate }).catch(() => {}).finally(() => setSpeaking(false));
+      return;
+    }
+    toast("La synthèse vocale n'est pas disponible dans ce navigateur.");
+  }
+  function stopSpeak() {
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    try { if (ttsCap) ttsCap.stop(); } catch (e) {}
+    setSpeaking(false);
+  }
+  function speakSummary() { if (speaking) stopSpeak(); else say(buildSummary()); }
+  $("speakBtn").addEventListener("click", speakSummary);
+  if (window.speechSynthesis) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) {} }
+
+  // résumé du matin : au premier toucher de la journée, entre 5 h et 11 h
+  let morning = store.get("tab.morning", false);
+  const sw = $("morningSw");
+  sw.setAttribute("aria-checked", String(morning));
+  sw.addEventListener("click", () => { morning = !morning; store.set("tab.morning", morning); sw.setAttribute("aria-checked", String(morning)); toast(morning ? "Résumé du matin activé" : "Résumé du matin désactivé"); });
+  document.addEventListener("pointerdown", function morningOnce(e) {
+    if (!morning) return;
+    const now = new Date(); const k = keyOf(now);
+    if (now.getHours() < 5 || now.getHours() >= 11 || store.get("tab.morningDone", "") === k) return;
+    if (e.target.closest("a, button, input")) return;
+    store.set("tab.morningDone", k);
+    setTimeout(() => say(buildSummary()), 150);
+  });
+
+  // ---------- centre de contrôle ----------
+  function openCC(on) {
+    document.body.classList.toggle("cc-open", on);
+    $("cc").setAttribute("aria-hidden", String(!on));
+    if (on) $("ccClose").focus({ preventScroll: true });
+  }
+  $("ccBtn").addEventListener("click", () => openCC(true));
+  $("ccClose").addEventListener("click", () => openCC(false));
+  $("scrim").addEventListener("click", () => openCC(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { openCC(false); setEditing(false); } });
+  // glisser vers le bas depuis le haut de l'écran pour ouvrir, vers le haut pour fermer
+  let ty = null;
+  document.addEventListener("touchstart", (e) => { const y = e.touches[0].clientY; ty = (y < 60 || document.body.classList.contains("cc-open")) ? y : null; }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    if (ty === null) return;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (dy > 70 && !document.body.classList.contains("cc-open")) openCC(true);
+    else if (dy < -70 && document.body.classList.contains("cc-open")) openCC(false);
+    ty = null;
+  }, { passive: true });
+
+  // luminosité
+  const bri = $("bri");
+  function setBri(v) { $("dim").style.opacity = ((100 - v) / 100 * 0.85).toFixed(2); bri.style.setProperty("--v", ((v - 30) / 70 * 100) + "%"); $("briVal").textContent = v + " %"; }
+  bri.value = store.get("tab.bri", 100); setBri(Number(bri.value));
+  bri.addEventListener("input", () => { setBri(Number(bri.value)); store.set("tab.bri", Number(bri.value)); });
+
+  // mode nuit
+  function setNight(on) { $("night").classList.toggle("on", on); $("tNight").setAttribute("aria-pressed", String(on)); }
+  setNight(store.get("tab.night", false));
+  $("tNight").addEventListener("click", () => { const on = $("tNight").getAttribute("aria-pressed") !== "true"; setNight(on); store.set("tab.night", on); });
+
+  // plein écran
+  $("tFull").addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen();
+    } catch (e) { toast("Le plein écran n'est pas possible ici. Ajoute la page à l'écran d'accueil."); }
+  });
+  document.addEventListener("fullscreenchange", () => $("tFull").setAttribute("aria-pressed", String(!!document.fullscreenElement)));
+
+  // écran toujours allumé
+  let lock = null;
+  async function wake(on) {
+    try {
+      if (on) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { if (!document.hidden) $("tWake").setAttribute("aria-pressed", "false"); }); $("tWake").setAttribute("aria-pressed", "true"); }
+      else { if (lock) await lock.release(); lock = null; $("tWake").setAttribute("aria-pressed", "false"); }
+    } catch (e) { toast("L'écran ne peut pas rester allumé dans ce navigateur."); $("tWake").setAttribute("aria-pressed", "false"); }
+  }
+  $("tWake").addEventListener("click", () => wake($("tWake").getAttribute("aria-pressed") !== "true"));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && $("tWake").getAttribute("aria-pressed") === "true" && !lock) wake(true); });
+
+  // fonds
+  const WALLS = [
+    { n: "Aube", bg: "#0b0f1a", g: ["rgba(255,140,90,.22)", "rgba(70,130,255,.20)", "rgba(180,90,255,.10)"], acc: "#ff9a62" },
+    { n: "Océan", bg: "#06131a", g: ["rgba(40,200,190,.22)", "rgba(40,110,255,.22)", "rgba(80,220,255,.08)"], acc: "#4fd8c8" },
+    { n: "Aurore", bg: "#0d0a1a", g: ["rgba(200,90,255,.22)", "rgba(255,90,150,.18)", "rgba(90,120,255,.12)"], acc: "#d68bff" },
+    { n: "Graphite", bg: "#101113", g: ["rgba(255,255,255,.06)", "rgba(255,255,255,.04)", "rgba(255,255,255,.02)"], acc: "#e8e3d8" }
+  ];
+  function setWall(i) {
+    const w = WALLS[i] || WALLS[0]; const r = document.documentElement.style;
+    r.setProperty("--bg", w.bg); r.setProperty("--glow-1", w.g[0]); r.setProperty("--glow-2", w.g[1]); r.setProperty("--glow-3", w.g[2]); r.setProperty("--accent", w.acc);
+    [...$("walls").children].forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", w.bg);
+  }
+  WALLS.forEach((w, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Fond " + w.n); b.title = w.n;
+    b.style.background = "radial-gradient(circle at 20% 20%, " + w.g[0].replace(/[\d.]+\)$/, ".9)") + ", transparent 70%), radial-gradient(circle at 80% 90%, " + w.g[1].replace(/[\d.]+\)$/, ".9)") + ", transparent 70%), " + w.bg;
+    b.addEventListener("click", () => { setWall(i); store.set("tab.wall", i); });
+    $("walls").appendChild(b);
+  });
+  setWall(store.get("tab.wall", 0));
+
+  // minuteur
+  let timerEnd = 0, timerInt = null;
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.35, 0.7].forEach((t) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.25, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3); });
+    } catch (e) {}
+  }
+  function renderTimer() {
+    const left = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+    $("timerLeft").textContent = pad(Math.floor(left / 60)) + ":" + pad(left % 60);
+    if (timerEnd && left === 0) { clearInterval(timerInt); timerEnd = 0; beep(); toast("Minuteur terminé"); say("Le minuteur est terminé."); }
+  }
+  $("timerRow").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-min]"); if (!b) return;
+    const m = Number(b.dataset.min); clearInterval(timerInt);
+    if (!m) { timerEnd = 0; renderTimer(); return; }
+    timerEnd = Date.now() + m * 60000; renderTimer(); timerInt = setInterval(renderTimer, 1000);
+    toast("Minuteur de " + m + " minutes lancé");
+  });
 })();
 </script>
 
