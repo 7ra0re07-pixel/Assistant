@@ -617,6 +617,14 @@ button { cursor: pointer; }
     store.set("tab.house", house); $("houseCfg").hidden = true; renderHouse(); toast("Réglages de la lampe enregistrés");
   });
   renderHouse();
+  // Dans le lecteur Claude (page intégrée), les liens d'application sont bloqués :
+  // on passe alors par la page Play Store, qui propose « Ouvrir ».
+  let framed = true; try { framed = window.top !== window.self; } catch (e) {}
+  if (framed) {
+    $("openAlexa").href = "https://play.google.com/store/apps/details?id=com.amazon.dee.app";
+    $("openTapo").href = "https://play.google.com/store/apps/details?id=com.tplink.iot";
+    ["openAlexa", "openTapo"].forEach((id) => { $(id).target = "_blank"; $(id).rel = "noopener"; });
+  }
 
   // ---------- disposition des widgets ----------
   const home = $("home");
