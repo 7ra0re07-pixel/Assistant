@@ -637,6 +637,9 @@ button { cursor: pointer; }
   function triggerUrl(v) {
     v = (v || "").trim();
     if (!v) return "";
+    // lien complet copié depuis l'Espace de jeu API de Voice Monkey : utilisé tel quel
+    const full = v.match(/https:\/\/[^\s"'`<>]+voicemonkey\.io[^\s"'`<>]*/i);
+    if (full) return full[0];
     const tk = grab(v, "token") || grab(house.token, "token") || (house.token || "").replace(/[\s"'`]+/g, "");
     let dev = grab(v, "device");
     if (!dev) dev = /:\/\//.test(v) ? "" : v.replace(/[\s"'`]+/g, "");
