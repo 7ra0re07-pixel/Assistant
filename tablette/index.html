@@ -612,15 +612,16 @@ button { cursor: pointer; }
     $("lampState").textContent = !ready ? "Pas encore reliée : touche « Configurer »" : house.state === true ? "Allumée" : house.state === false ? "Éteinte" : "Prête";
     $("lampBtn").setAttribute("aria-pressed", String(house.state === true));
   }
+  // Retrouve token et ID même dans un texte collé avec du superflu (guillemets, curl, code…)
+  const grab = (txt, key) => { const m = (txt || "").match(new RegExp(key + "[\"']?\\s*[=:]\\s*[\"']?([A-Za-z0-9_\\-.%]+)", "i")); return m ? decodeURIComponent(m[1]) : ""; };
   function triggerUrl(v) {
     v = (v || "").trim();
     if (!v) return "";
-    if (/^https?:\/\//i.test(v)) return v;
-    let tk = (house.token || "").replace(/\s+/g, "");
-    const m = tk.match(/token=([^&]+)/i); if (m) tk = m[1];
-    if (!tk) return "";
-    v = v.replace(/\s+/g, ""); const dm = v.match(/device=([^&]+)/i); if (dm) v = decodeURIComponent(dm[1]);
-    return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(tk) + "&device=" + encodeURIComponent(v);
+    const tk = grab(v, "token") || grab(house.token, "token") || (house.token || "").replace(/[\s"'`]+/g, "");
+    let dev = grab(v, "device");
+    if (!dev) dev = /:\/\//.test(v) ? "" : v.replace(/[\s"'`]+/g, "");
+    if (!tk || !dev) return "";
+    return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(tk) + "&device=" + encodeURIComponent(dev);
   }
   async function lamp(on) {
     const url = triggerUrl(on ? house.on : house.off);
@@ -634,7 +635,7 @@ button { cursor: pointer; }
       if (!r.ok || (body && body.success === false)) { okResp = false; why = (body && (body.error || body.message)) || ("code " + r.status); }
     } catch (e) {
       try { await fetch(url, { method: "GET", mode: "no-cors" }); }
-      catch (e2) { toast("La commande n'est pas passée. Vérifie ta connexion internet."); return; }
+      catch (e2) { toast("Impossible de joindre Voice Monkey. Vérifie ta connexion, puis recopie le token et l'ID dans « Configurer »."); return; }
     }
     if (!okResp) { toast("Voice Monkey a refusé : " + why + ". Vérifie le token et l'ID."); return; }
     house.state = on; store.set("tab.house", house); renderHouse();
