@@ -413,11 +413,13 @@ button { cursor: pointer; }
     <form class="cfg" id="houseCfg" hidden>
       <label for="lampNameIn">Nom de la lampe (comme dans l'application Alexa)</label>
       <input class="field" id="lampNameIn" type="text" placeholder="ex. Lampe salon">
-      <label for="urlOn">Lien « Allumer » (Voice Monkey ou IFTTT)</label>
-      <input class="field" id="urlOn" type="url" placeholder="https://…">
-      <label for="urlOff">Lien « Éteindre »</label>
-      <input class="field" id="urlOff" type="url" placeholder="https://…">
-      <p>Ces liens restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
+      <label for="vmToken">Token Voice Monkey (API)</label>
+      <input class="field" id="vmToken" type="text" autocomplete="off" placeholder="ton token">
+      <label for="urlOn">ID de l'appareil « lampe on » (ou lien complet)</label>
+      <input class="field" id="urlOn" type="text" autocomplete="off" placeholder="ex. lampe-on">
+      <label for="urlOff">ID de l'appareil « lampe off » (ou lien complet)</label>
+      <input class="field" id="urlOff" type="text" autocomplete="off" placeholder="ex. lampe-off">
+      <p>Ces réglages restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
       <button class="btn primary" type="submit">Enregistrer</button>
     </form>
   </section>
@@ -594,13 +596,20 @@ button { cursor: pointer; }
     const nm = house.name || "la lampe";
     $("lampName").textContent = house.name || "Lampe Tapo";
     document.querySelectorAll(".lampSay").forEach((e) => { e.textContent = nm.toLowerCase(); });
-    const ready = !!(house.on && house.off);
+    const ready = !!(triggerUrl(house.on) && triggerUrl(house.off));
     $("lampState").textContent = !ready ? "Pas encore reliée : touche « Configurer »" : house.state === true ? "Allumée" : house.state === false ? "Éteinte" : "Prête";
     $("lampBtn").setAttribute("aria-pressed", String(house.state === true));
   }
+  function triggerUrl(v) {
+    v = (v || "").trim();
+    if (!v) return "";
+    if (/^https?:\/\//i.test(v)) return v;
+    if (!house.token) return "";
+    return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(house.token) + "&device=" + encodeURIComponent(v);
+  }
   async function lamp(on) {
-    const url = on ? house.on : house.off;
-    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord les liens dans « Configurer »"); return; }
+    const url = triggerUrl(on ? house.on : house.off);
+    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token et les ID dans « Configurer »"); return; }
     try {
       await fetch(url, { method: "GET", mode: "no-cors" });
       house.state = on; store.set("tab.house", house); renderHouse();
@@ -612,11 +621,11 @@ button { cursor: pointer; }
   $("lampBtn").addEventListener("click", () => lamp(house.state !== true));
   $("houseCfgBtn").addEventListener("click", () => {
     const f = $("houseCfg"); f.hidden = !f.hidden;
-    $("lampNameIn").value = house.name; $("urlOn").value = house.on; $("urlOff").value = house.off;
+    $("lampNameIn").value = house.name; $("vmToken").value = house.token || ""; $("urlOn").value = house.on; $("urlOff").value = house.off;
   });
   $("houseCfg").addEventListener("submit", (e) => {
     e.preventDefault();
-    house.name = $("lampNameIn").value.trim(); house.on = $("urlOn").value.trim(); house.off = $("urlOff").value.trim();
+    house.name = $("lampNameIn").value.trim(); house.token = $("vmToken").value.trim(); house.on = $("urlOn").value.trim(); house.off = $("urlOff").value.trim();
     store.set("tab.house", house); $("houseCfg").hidden = true; renderHouse(); toast("Réglages de la lampe enregistrés");
   });
   renderHouse();
