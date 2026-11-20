@@ -599,7 +599,7 @@ button { cursor: pointer; }
     const nm = house.name || "la lampe";
     $("lampName").textContent = house.name || "Lampe Tapo";
     document.querySelectorAll(".lampSay").forEach((e) => { e.textContent = nm.toLowerCase(); });
-    const ready = !!(triggerUrl(house.on) && triggerUrl(house.off));
+    const ready = !!((typeof vmMcp !== "undefined" && vmMcp && deviceId(house.on) && deviceId(house.off)) || (triggerUrl(house.on) && triggerUrl(house.off)));
     $("lampState").textContent = !ready ? "Pas encore reliée : touche « Configurer »" : house.state === true ? "Allumée" : house.state === false ? "Éteinte" : "Prête";
     $("lampBtn").setAttribute("aria-pressed", String(house.state === true));
   }
@@ -614,7 +614,33 @@ button { cursor: pointer; }
     if (!tk || !dev) return "";
     return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(tk) + "&device=" + encodeURIComponent(dev);
   }
+  // Connecteur Voice Monkey de Claude (lien Claude uniquement) : pas besoin de token
+  let vmMcp = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("mcp").then((m) => { vmMcp = m; renderHouse(); }).catch(() => {});
+  }
+  function deviceId(v) {
+    v = (v || "").trim();
+    const d = grab(v, "device");
+    if (d) return d;
+    return /:\/\//.test(v) ? "" : v.replace(/[\s"'`]+/g, "");
+  }
   async function lamp(on) {
+    const dev = deviceId(on ? house.on : house.off);
+    if (vmMcp && dev) {
+      try {
+        await vmMcp.callTool("Voicemonkey", "trigger", { routine: dev });
+        house.state = on; store.set("tab.house", house); renderHouse();
+        toast(on ? "Lampe allumée via Voice Monkey" : "Lampe éteinte via Voice Monkey");
+        return;
+      } catch (e) {
+        const c = e && e.code;
+        if (c === "tool_error") { toast("Voice Monkey ne trouve pas la routine « " + dev + " ». Vérifie l'ID dans « Configurer »."); return; }
+        if (c === "needs_reauth") { toast("Reconnecte Voice Monkey dans claude.ai → Paramètres → Connecteurs."); return; }
+        if (c === "server_unavailable" || c === "upstream_error") { toast("Voice Monkey ne répond pas pour l'instant. Réessaie dans un moment."); return; }
+        // sinon (connecteur non autorisé ou absent) : on passe au token
+      }
+    }
     const url = triggerUrl(on ? house.on : house.off);
     if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token et les ID dans « Configurer »"); return; }
     // 1) essai normal pour lire la réponse de Voice Monkey ; 2) sinon envoi « aveugle »
