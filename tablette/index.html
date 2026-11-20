@@ -365,8 +365,8 @@ button { cursor: pointer; }
     <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Météo <span id="wcity"></span></span><button class="link-btn" id="wchange" type="button">Changer de ville</button></h2>
     <div id="wbody"><p class="wmsg">Chargement de la météo…</p></div>
-    <form class="city-form" id="cityForm" hidden>
-      <input class="field" id="cityInput" type="text" placeholder="Ta ville (ex. Lyon, Dakar…)" autocomplete="off" aria-label="Ville">
+    <form class="city-form" id="cityForm" autocomplete="off" hidden>
+      <input class="field" id="cityInput" type="text" placeholder="Ville pour la météo (ex. Lyon)" aria-label="Ville" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <button class="btn primary" type="submit">Valider</button>
       <button class="btn" type="button" id="geoBtn">Ma position</button>
     </form>
@@ -390,9 +390,9 @@ button { cursor: pointer; }
     <div class="grid" id="grid"></div>
     <p class="ev-day" id="evDay"></p>
     <ul class="ev-list" id="evList"></ul>
-    <form class="ev-form" id="evForm">
+    <form class="ev-form" id="evForm" autocomplete="off">
       <input class="field" id="evTime" type="time" aria-label="Heure">
-      <input class="field" id="evText" type="text" placeholder="Ajouter un rendez-vous…" required aria-label="Rendez-vous">
+      <input class="field" id="evText" type="text" placeholder="Ajouter un rendez-vous…" required aria-label="Rendez-vous" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <button class="btn primary" type="submit">Ajouter</button>
     </form>
     <a class="gcal" href="https://calendar.google.com" target="_blank" rel="noopener">Ouvrir Google Agenda ↗</a>
@@ -408,9 +408,9 @@ button { cursor: pointer; }
     <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Mes raccourcis</span><button class="link-btn" id="customEdit" type="button">Modifier</button></h2>
     <div class="tiles" id="tiles-custom"></div>
-    <form class="add-form" id="addForm" hidden>
-      <input class="field" id="addName" type="text" placeholder="Nom" required aria-label="Nom du raccourci">
-      <input class="field" id="addUrl" type="text" placeholder="Adresse (ex. instagram.com)" required aria-label="Adresse du site">
+    <form class="add-form" id="addForm" autocomplete="off" hidden>
+      <input class="field" id="addName" type="text" placeholder="Nom du raccourci" required aria-label="Nom du raccourci" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+      <input class="field" id="addUrl" type="text" placeholder="Lien du site (ex. instagram.com)" required aria-label="Adresse du site" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <button class="btn primary" type="submit">Ajouter</button>
     </form>
   </section>
@@ -439,15 +439,15 @@ button { cursor: pointer; }
       <a class="app-btn" id="openTapo" href="intent://#Intent;package=com.tplink.iot;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.tplink.iot;end"><span class="ic" style="background:linear-gradient(160deg,#4a7bff,#2b55d6)">T</span><span>Ouvrir Tapo</span></a>
     </div>
     <p class="say">Avec ta voix : <b>« Alexa, allume <span class="lampSay">la lampe</span> »</b> ou <b>« Alexa, éteins <span class="lampSay">la lampe</span> »</b></p>
-    <form class="cfg" id="houseCfg" hidden>
+    <form class="cfg" id="houseCfg" autocomplete="off" hidden>
       <label for="lampNameIn">Nom de la lampe (comme dans l'application Alexa)</label>
-      <input class="field" id="lampNameIn" type="text" placeholder="ex. Lampe salon">
+      <input class="field" id="lampNameIn" type="text" placeholder="ex. Lampe salon" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <label for="vmToken">Token Voice Monkey (API)</label>
-      <input class="field" id="vmToken" type="text" autocomplete="off" placeholder="ton token">
+      <input class="field" id="vmToken" type="text" placeholder="ton token" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <label for="urlOn">ID de l'appareil « lampe on » (ou lien complet)</label>
-      <input class="field" id="urlOn" type="text" autocomplete="off" placeholder="ex. lampe-on">
+      <input class="field" id="urlOn" type="text" placeholder="ex. lampe-on" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <label for="urlOff">ID de l'appareil « lampe off » (ou lien complet)</label>
-      <input class="field" id="urlOff" type="text" autocomplete="off" placeholder="ex. lampe-off">
+      <input class="field" id="urlOff" type="text" placeholder="ex. lampe-off" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <p>Ces réglages restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
       <button class="btn primary" type="submit">Enregistrer</button>
     </form>
