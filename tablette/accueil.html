@@ -785,29 +785,44 @@ button { cursor: pointer; }
     $("cityForm").hidden = false;
     if (msg) { const p = document.createElement("p"); p.className = "wmsg"; p.textContent = msg; $("wbody").replaceChildren(p); }
   }
+  let wxRetry = null, wxShown = false;
+  function renderWeather(d, loc, at) {
+    $("wcity").textContent = loc && loc.name ? "· " + loc.name : "";
+    const [ic, label] = wmo(d.current.weather_code);
+    lastWeather = { t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
+    const upd = new Date(at);
+    let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
+      '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
+    html += '<div class="wdays">';
+    d.daily.time.forEach((t, i) => {
+      const day = new Date(t + "T12:00");
+      const isToday = keyOf(day) === keyOf(new Date());
+      const lbl = isToday ? "Auj." : day.toLocaleDateString("fr-FR", { weekday: "short" });
+      html += '<div class="wday"><div class="d">' + lbl + "</div>" + ICON[wmo(d.daily.weather_code[i])[0]] +
+        '<div class="t">' + Math.round(d.daily.temperature_2m_max[i]) + "° <span>" + Math.round(d.daily.temperature_2m_min[i]) + "°</span></div></div>";
+    });
+    html += '</div><p class="wmsg" id="wUpd">Mis à jour à ' + pad(upd.getHours()) + ":" + pad(upd.getMinutes()) + "</p>";
+    $("wbody").innerHTML = html;
+    $("sWeather").textContent = lastWeather.t + "° " + label.toLowerCase();
+    $("cityForm").hidden = true;
+    wxShown = true;
+    relayout();
+  }
   async function loadWeather(loc) {
-    $("wcity").textContent = loc.name ? "· " + loc.name : "";
+    clearTimeout(wxRetry);
     try {
       const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
         "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5";
       const r = await fetch(url); if (!r.ok) throw new Error();
       const d = await r.json();
-      const [ic, label] = wmo(d.current.weather_code);
-      lastWeather = { t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc.name };
-      let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
-        '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
-      html += '<div class="wdays">';
-      d.daily.time.forEach((t, i) => {
-        const day = i === 0 ? "Auj." : new Date(t + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
-        html += '<div class="wday"><div class="d">' + day + "</div>" + ICON[wmo(d.daily.weather_code[i])[0]] +
-          '<div class="t">' + Math.round(d.daily.temperature_2m_max[i]) + "° <span>" + Math.round(d.daily.temperature_2m_min[i]) + "°</span></div></div>";
-      });
-      $("wbody").innerHTML = html + "</div>";
-      relayout();
-      $("sWeather").textContent = lastWeather.t + "° " + label.toLowerCase();
-      $("cityForm").hidden = true;
+      const at = Date.now();
+      store.set("tab.wx", { d, loc, at });
+      renderWeather(d, loc, at);
     } catch (e) {
-      showCityForm("La météo n'a pas pu se charger ici. Ouvre cette page directement dans Chrome sur ta tablette pour l'avoir en direct.");
+      // on garde la dernière météo affichée et on réessaie dans 2 minutes
+      wxRetry = setTimeout(() => loadWeather(loc), 2 * 60 * 1000);
+      if (wxShown) { const u = $("wUpd"); if (u && !/hors ligne/.test(u.textContent)) u.textContent += " · hors ligne, nouvel essai bientôt"; return; }
+      showCityForm("La météo n'a pas pu se charger. Vérifie internet : la page réessaie toute seule. Dans le lien Claude, la météo est bloquée, utilise l'appli installée.");
     }
   }
   async function findCity(q) {
@@ -829,8 +844,16 @@ button { cursor: pointer; }
   $("geoBtn").addEventListener("click", useGeo);
   $("wchange").addEventListener("click", () => { $("cityForm").hidden = !$("cityForm").hidden; if (!$("cityForm").hidden) $("cityInput").focus(); });
   const savedLoc = store.get("tab.loc", null);
-  if (savedLoc) loadWeather(savedLoc); else useGeo();
-  setInterval(() => { const l = store.get("tab.loc", null); if (l) loadWeather(l); }, 30 * 60 * 1000);
+  const cachedWx = store.get("tab.wx", null);
+  if (cachedWx && cachedWx.d && cachedWx.d.current) { try { renderWeather(cachedWx.d, cachedWx.loc || savedLoc, cachedWx.at); } catch (e) {} }
+  if (savedLoc) loadWeather(savedLoc); else if (cachedWx && cachedWx.loc) { store.set("tab.loc", cachedWx.loc); loadWeather(cachedWx.loc); } else useGeo();
+  const refreshWx = () => { const l = store.get("tab.loc", null); if (l) loadWeather(l); };
+  setInterval(refreshWx, 30 * 60 * 1000);
+  window.addEventListener("online", refreshWx);
+  document.addEventListener("visibilitychange", () => {
+    const c = store.get("tab.wx", null);
+    if (!document.hidden && (!c || Date.now() - c.at > 15 * 60 * 1000)) refreshWx();
+  });
 
   // ---------- agenda ----------
   const today = new Date();
