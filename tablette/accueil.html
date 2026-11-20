@@ -592,6 +592,9 @@ button { cursor: pointer; }
 
   // ---------- maison : lampe Tapo via Alexa ----------
   let house = store.get("tab.house", { name: "", on: "", off: "", state: null });
+  // ID des routines Voice Monkey (non secrets : inutiles sans le token)
+  if (!house.on) house.on = "lampe-tapo-on-n4fzs";
+  if (!house.off) house.off = "lights-off-mskct";
   function renderHouse() {
     const nm = house.name || "la lampe";
     $("lampName").textContent = house.name || "Lampe Tapo";
