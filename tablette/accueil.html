@@ -198,6 +198,9 @@ button { cursor: pointer; }
 .lamp-name { font-family: var(--font-display); font-size: 20px; font-weight: 500; margin: 0; }
 .lamp-state { color: var(--muted); font-size: 14px; margin: 0; }
 .lamp-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.scene-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.scene-row .btn { border-radius: 999px; padding: 8px 14px; font-size: 14px; }
+.scene-row .btn:active { transform: scale(.95); }
 .app-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .app-btn { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); text-decoration: none; color: var(--fg); font-weight: 500; min-width: 0; }
 .app-btn:hover { background: var(--glass-hi); }
@@ -404,6 +407,10 @@ button { cursor: pointer; }
           <button class="btn" type="button" id="lampOff">Éteindre</button>
         </div>
       </div>
+    </div>
+    <div id="scenes" hidden>
+      <p class="cc-h"><span>Ambiances</span><button class="link-btn" id="scenesReload" type="button">Actualiser</button></p>
+      <div class="scene-row" id="sceneRow"></div>
     </div>
     <div class="app-row">
       <a class="app-btn" id="openAlexa" href="intent://#Intent;package=com.amazon.dee.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.amazon.dee.app;end"><span class="ic" style="background:linear-gradient(160deg,#2fc2ef,#1a8fd0)">A</span><span>Ouvrir Alexa</span></a>
@@ -617,7 +624,35 @@ button { cursor: pointer; }
   // Connecteur Voice Monkey de Claude (lien Claude uniquement) : pas besoin de token
   let vmMcp = null;
   if (window.claude && typeof window.claude.use === "function") {
-    window.claude.use("mcp").then((m) => { vmMcp = m; renderHouse(); }).catch(() => {});
+    window.claude.use("mcp").then((m) => { vmMcp = m; renderHouse(); if (m) loadScenes(); }).catch(() => {});
+  }
+  // Ambiances : toutes les autres routines Voice Monkey deviennent des boutons
+  function parseDevices(res) {
+    let p = res && (res.payload !== undefined ? res.payload : res.structuredContent);
+    if (p && !Array.isArray(p) && typeof p === "object") p = p.devices || p.items || p.data || null;
+    if (Array.isArray(p)) return p;
+    let txt = typeof p === "string" ? p : "";
+    if (!txt && res && Array.isArray(res.content)) txt = res.content.map((c) => c.text || "").join("\n");
+    const m = txt.match(/\[[\s\S]*\]/);
+    try { return m ? JSON.parse(m[0]) : []; } catch (e) { return []; }
+  }
+  async function loadScenes() {
+    if (!vmMcp) return;
+    try {
+      const res = await vmMcp.callTool("Voicemonkey", "list_devices", {});
+      const used = [deviceId(house.on), deviceId(house.off)];
+      const list = parseDevices(res).filter((d) => d && d.id && d.capability === "routines" && !used.includes(d.id));
+      const row = $("sceneRow"); row.replaceChildren();
+      list.forEach((d) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = d.name || d.id;
+        b.addEventListener("click", async () => {
+          try { await vmMcp.callTool("Voicemonkey", "trigger", { routine: d.id }); toast("« " + (d.name || d.id) + " » lancé"); }
+          catch (e) { toast("Voice Monkey n'a pas pu lancer « " + (d.name || d.id) + " »."); }
+        });
+        row.appendChild(b);
+      });
+      $("scenes").hidden = !list.length;
+    } catch (e) { $("scenes").hidden = true; }
   }
   function deviceId(v) {
     v = (v || "").trim();
@@ -671,6 +706,7 @@ button { cursor: pointer; }
     store.set("tab.house", house); $("houseCfg").hidden = true; renderHouse(); toast("Réglages de la lampe enregistrés");
   });
   renderHouse();
+  $("scenesReload").addEventListener("click", () => { loadScenes(); toast("Ambiances actualisées"); });
   // Dans le lecteur Claude (page intégrée), les liens d'application sont bloqués :
   // on passe alors par la page Play Store, qui propose « Ouvrir ».
   let framed = true; try { framed = window.top !== window.self; } catch (e) {}
