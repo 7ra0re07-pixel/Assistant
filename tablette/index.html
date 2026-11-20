@@ -619,11 +619,20 @@ button { cursor: pointer; }
   async function lamp(on) {
     const url = triggerUrl(on ? house.on : house.off);
     if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token et les ID dans « Configurer »"); return; }
+    // 1) essai normal pour lire la réponse de Voice Monkey ; 2) sinon envoi « aveugle »
+    let checked = false, okResp = true, why = "";
     try {
-      await fetch(url, { method: "GET", mode: "no-cors" });
-      house.state = on; store.set("tab.house", house); renderHouse();
-      toast(on ? "Lampe allumée" : "Lampe éteinte");
-    } catch (e) { toast("La commande n'est pas passée. Vérifie ta connexion ou le lien."); }
+      const r = await fetch(url, { method: "GET" });
+      checked = true;
+      let body = null; try { body = await r.json(); } catch (e) {}
+      if (!r.ok || (body && body.success === false)) { okResp = false; why = (body && (body.error || body.message)) || ("code " + r.status); }
+    } catch (e) {
+      try { await fetch(url, { method: "GET", mode: "no-cors" }); }
+      catch (e2) { toast("La commande n'est pas passée. Vérifie ta connexion internet."); return; }
+    }
+    if (!okResp) { toast("Voice Monkey a refusé : " + why + ". Vérifie le token et l'ID."); return; }
+    house.state = on; store.set("tab.house", house); renderHouse();
+    toast((checked ? "Voice Monkey a reçu la commande : " : "Commande envoyée : ") + (on ? "allumer" : "éteindre"));
   }
   $("lampOn").addEventListener("click", () => lamp(true));
   $("lampOff").addEventListener("click", () => lamp(false));
