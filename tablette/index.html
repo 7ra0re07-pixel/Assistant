@@ -126,12 +126,20 @@ button { cursor: pointer; }
 .editing .w { animation: wiggle .45s ease-in-out infinite alternate; }
 .editing .w:nth-child(even) { animation-direction: alternate-reverse; }
 @keyframes wiggle { from { transform: rotate(-.35deg); } to { transform: rotate(.35deg); } }
-.move { display: none; position: absolute; top: -12px; right: 14px; gap: 6px; z-index: 2; }
+.move { display: none; position: absolute; top: -14px; right: 14px; gap: 6px; z-index: 3; }
 .editing .move { display: flex; }
-.move button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 16px; }
+.move button { min-width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 16px; padding: 0 10px; }
+.move .grip { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; font-size: 14px; touch-action: none; cursor: grab; display: inline-flex; align-items: center; gap: 6px; }
+.move .grip:active { cursor: grabbing; }
+.editing .w > *:not(.move) { pointer-events: none; user-select: none; -webkit-user-select: none; }
+.w.dragging { animation: none !important; transition: none; box-shadow: 0 40px 80px -24px rgba(0,0,0,.85); transform: scale(1.02) rotate(.5deg); opacity: .96; }
+.ph { border: 2px dashed var(--accent); border-radius: var(--r); background: rgba(255,255,255,.03); }
 .edit-bar { display: none; position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 40; gap: 10px; align-items: center; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 16px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 14px; }
 .editing .edit-bar { display: flex; }
 .edit-bar .btn { border-radius: 999px; padding: 6px 14px; }
+.edit-bar span { min-width: 0; }
+@media (max-width: 900px) { .move .sw { display: none; } }
+@media (max-width: 600px) { .edit-bar span { display: none; } }
 
 /* ---------- horloge ---------- */
 .clock { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding-left: 6px; }
@@ -330,11 +338,11 @@ button { cursor: pointer; }
   </div>
 </header>
 
-<div class="edit-bar" role="status"><span>Déplace les widgets avec les flèches</span><button class="btn primary" type="button" id="editDone">Terminé</button></div>
+<div class="edit-bar" role="status"><span>Attrape « ⠿ Déplacer » et fais glisser le widget</span><button class="btn" type="button" id="editReset">Par défaut</button><button class="btn primary" type="button" id="editDone">Terminé</button></div>
 
 <main class="home" id="home">
   <section class="w clock span-7" data-id="clock" aria-label="Heure">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <p class="greet" id="greet">Bonjour</p>
     <div>
       <p class="time" id="time">--:--<span class="sec">--</span></p>
@@ -350,7 +358,7 @@ button { cursor: pointer; }
   </section>
 
   <section class="w weather span-5" data-id="weather" aria-label="Météo">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Météo <span id="wcity"></span></span><button class="link-btn" id="wchange" type="button">Changer de ville</button></h2>
     <div id="wbody"><p class="wmsg">Chargement de la météo…</p></div>
     <form class="city-form" id="cityForm" hidden>
@@ -361,13 +369,13 @@ button { cursor: pointer; }
   </section>
 
   <section class="w span-7" data-id="video" aria-label="Films et séries">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Films &amp; séries</span></h2>
     <div class="tiles" id="tiles-video"></div>
   </section>
 
   <section class="w agenda span-5" data-id="agenda" aria-label="Agenda">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <div class="cal-head">
       <p class="cal-title" id="calTitle"></p>
       <div class="nav">
@@ -387,13 +395,13 @@ button { cursor: pointer; }
   </section>
 
   <section class="w span-7" data-id="music" aria-label="Musique">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Musique</span></h2>
     <div class="tiles" id="tiles-music"></div>
   </section>
 
   <section class="w span-5" data-id="custom" aria-label="Mes raccourcis">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Mes raccourcis</span><button class="link-btn" id="customEdit" type="button">Modifier</button></h2>
     <div class="tiles" id="tiles-custom"></div>
     <form class="add-form" id="addForm" hidden>
@@ -403,7 +411,7 @@ button { cursor: pointer; }
     </form>
   </section>
   <section class="w house span-5" data-id="home" aria-label="Maison">
-    <div class="move"><button type="button" data-mv="-1" aria-label="Avancer">‹</button><button type="button" data-mv="1" aria-label="Reculer">›</button></div>
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Maison</span><button class="link-btn" id="houseCfgBtn" type="button">Configurer</button></h2>
     <div class="lamp-row">
       <button class="lamp" id="lampBtn" type="button" aria-pressed="false" aria-label="Allumer ou éteindre la lampe">
@@ -728,37 +736,120 @@ button { cursor: pointer; }
 
   // ---------- disposition des widgets ----------
   const home = $("home");
-  const DEFAULT_ORDER = ["clock", "video", "music", "custom", "weather", "agenda", "home"];
-  // colonne de chaque widget : gauche (large) = usage fréquent, droite = infos
-  const COL = { clock: "L", video: "L", music: "L", custom: "L", weather: "R", agenda: "R", home: "R" };
-  let order = store.get("tab.order", DEFAULT_ORDER).filter((id) => DEFAULT_ORDER.includes(id));
-  DEFAULT_ORDER.forEach((id) => { if (!order.includes(id)) order.push(id); });
-  // Deux colonnes équilibrées : chaque widget va dans la colonne la moins haute
+  // Disposition : deux colonnes, rangées par l'utilisateur (glisser-déposer ou flèches)
+  const DEFAULT_LAYOUT = { L: ["clock", "video", "music", "custom"], R: ["weather", "agenda", "home"] };
+  const ALL_IDS = [...DEFAULT_LAYOUT.L, ...DEFAULT_LAYOUT.R];
+  function cleanLayout(l) {
+    const out = { L: [], R: [] }; const seen = new Set();
+    ["L", "R"].forEach((k) => ((l && l[k]) || []).forEach((id) => { if (ALL_IDS.includes(id) && !seen.has(id)) { out[k].push(id); seen.add(id); } }));
+    ALL_IDS.forEach((id) => { if (!seen.has(id)) (DEFAULT_LAYOUT.L.includes(id) ? out.L : out.R).push(id); });
+    return out;
+  }
+  let layout = store.get("tab.layout", null);
+  if (!layout) { // reprise de l'ancien ordre s'il existe
+    const old = store.get("tab.order", null);
+    layout = old ? { L: old.filter((id) => DEFAULT_LAYOUT.L.includes(id)), R: old.filter((id) => DEFAULT_LAYOUT.R.includes(id)) } : DEFAULT_LAYOUT;
+  }
+  layout = cleanLayout(layout);
   const colL = document.createElement("div"); colL.className = "col";
   const colR = document.createElement("div"); colR.className = "col";
   home.append(colL, colR);
   const narrow = () => window.matchMedia("(max-width: 900px)").matches;
+  const W = (id) => home.querySelector('.w[data-id="' + id + '"]');
+  let drag = null;
   function applyOrder() {
-    const els = order.map((id) => home.querySelector('[data-id="' + id + '"]'));
+    if (drag) return;
     colR.hidden = narrow();
-    if (narrow()) { els.forEach((el, i) => { el.style.setProperty("--i", i); colL.appendChild(el); }); return; }
-    els.forEach((el, i) => { el.style.setProperty("--i", i); (COL[el.dataset.id] === "R" ? colR : colL).appendChild(el); });
+    let i = 0;
+    layout.L.forEach((id) => { const el = W(id); el.style.setProperty("--i", i++); colL.appendChild(el); });
+    layout.R.forEach((id) => { const el = W(id); el.style.setProperty("--i", i++); (narrow() ? colL : colR).appendChild(el); });
   }
+  function saveLayout() { layout = cleanLayout(layout); store.set("tab.layout", layout); }
   let relayT;
   function relayout() { clearTimeout(relayT); relayT = setTimeout(applyOrder, 120); }
   applyOrder();
   window.addEventListener("resize", relayout);
   window.addEventListener("load", relayout);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+
+  // flèches : monter / descendre dans la colonne, changer de colonne
   home.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-mv]"); if (!b) return;
-    const id = b.closest(".w").dataset.id; const i = order.indexOf(id);
-    // on échange avec le voisin de la même colonne (ou de la liste sur téléphone)
-    let j = i + Number(b.dataset.mv);
-    while (j >= 0 && j < order.length && !narrow() && COL[order[j]] !== COL[id]) j += Number(b.dataset.mv);
-    if (j < 0 || j >= order.length) return;
-    [order[i], order[j]] = [order[j], order[i]]; store.set("tab.order", order); applyOrder();
+    const b = e.target.closest("[data-mv], [data-sw]"); if (!b) return;
+    const id = b.closest(".w").dataset.id;
+    const k = layout.L.includes(id) ? "L" : "R";
+    if (b.dataset.sw) {
+      layout[k] = layout[k].filter((x) => x !== id);
+      layout[k === "L" ? "R" : "L"].push(id);
+    } else if (narrow()) {
+      const flat = [...layout.L, ...layout.R]; const i = flat.indexOf(id); const j = i + Number(b.dataset.mv);
+      if (j < 0 || j >= flat.length) return;
+      [flat[i], flat[j]] = [flat[j], flat[i]];
+      const nL = layout.L.length; layout = { L: flat.slice(0, nL), R: flat.slice(nL) };
+    } else {
+      const arr = layout[k]; const i = arr.indexOf(id); const j = i + Number(b.dataset.mv);
+      if (j < 0 || j >= arr.length) return;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    saveLayout(); applyOrder();
+    const el = W(id); if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   });
+
+  // glisser-déposer au doigt ou à la souris, par la poignée « ⠿ Déplacer »
+  home.addEventListener("pointerdown", (e) => {
+    const g = e.target.closest(".grip");
+    if (!g || !document.body.classList.contains("editing") || drag) return;
+    e.preventDefault();
+    const w = g.closest(".w"); const r = w.getBoundingClientRect();
+    const ph = document.createElement("div"); ph.className = "ph"; ph.style.height = r.height + "px";
+    w.before(ph);
+    w.classList.add("dragging");
+    Object.assign(w.style, { position: "fixed", left: r.left + "px", top: r.top + "px", width: r.width + "px", zIndex: 80, pointerEvents: "none", margin: "0" });
+    drag = { w, ph, dx: e.clientX - r.left, dy: e.clientY - r.top, x: e.clientX, y: e.clientY };
+    try { g.setPointerCapture(e.pointerId); } catch (err) {}
+    tickScroll();
+  });
+  function placePh() {
+    const { x, y } = drag;
+    let col = colL;
+    if (!narrow()) { const rr = colR.getBoundingClientRect(); if (x >= rr.left - 9) col = colR; }
+    const sibs = [...col.children].filter((c) => c !== drag.ph && c !== drag.w && c.classList.contains("w"));
+    let before = null;
+    for (const c of sibs) { const b = c.getBoundingClientRect(); if (y < b.top + b.height / 2) { before = c; break; } }
+    if (before) { if (drag.ph.nextSibling !== before) col.insertBefore(drag.ph, before); }
+    else if (col.lastElementChild !== drag.ph) col.appendChild(drag.ph);
+  }
+  function tickScroll() { // défilement automatique près des bords
+    if (!drag) return;
+    const edge = 90, sp = 14;
+    if (drag.y < edge) window.scrollBy(0, -sp);
+    else if (drag.y > window.innerHeight - edge) window.scrollBy(0, sp);
+    placePh();
+    requestAnimationFrame(tickScroll);
+  }
+  document.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    drag.x = e.clientX; drag.y = e.clientY;
+    drag.w.style.left = (e.clientX - drag.dx) + "px";
+    drag.w.style.top = (e.clientY - drag.dy) + "px";
+  });
+  function endDrag() {
+    if (!drag) return;
+    const { w, ph } = drag;
+    ph.replaceWith(w);
+    w.classList.remove("dragging");
+    ["position", "left", "top", "width", "zIndex", "pointerEvents", "margin"].forEach((p) => { w.style[p] = ""; });
+    drag = null;
+    const ids = (c) => [...c.children].filter((x) => x.classList.contains("w")).map((x) => x.dataset.id);
+    if (narrow()) { // une seule colonne : on garde la colonne de chaque widget, on change l'ordre
+      const flat = ids(colL); const nL = layout.L.length;
+      layout = { L: flat.slice(0, nL), R: flat.slice(nL) };
+    } else layout = { L: ids(colL), R: ids(colR) };
+    saveLayout(); applyOrder();
+    toast("Disposition enregistrée");
+  }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  $("editReset").addEventListener("click", () => { layout = cleanLayout(DEFAULT_LAYOUT); saveLayout(); applyOrder(); toast("Disposition par défaut rétablie"); });
   function setEditing(on) {
     document.body.classList.toggle("editing", on);
     $("tEdit").setAttribute("aria-pressed", String(on));
