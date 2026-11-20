@@ -613,8 +613,11 @@ button { cursor: pointer; }
     v = (v || "").trim();
     if (!v) return "";
     if (/^https?:\/\//i.test(v)) return v;
-    if (!house.token) return "";
-    return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(house.token) + "&device=" + encodeURIComponent(v);
+    let tk = (house.token || "").replace(/\s+/g, "");
+    const m = tk.match(/token=([^&]+)/i); if (m) tk = m[1];
+    if (!tk) return "";
+    v = v.replace(/\s+/g, ""); const dm = v.match(/device=([^&]+)/i); if (dm) v = decodeURIComponent(dm[1]);
+    return "https://api-v2.voicemonkey.io/trigger?token=" + encodeURIComponent(tk) + "&device=" + encodeURIComponent(v);
   }
   async function lamp(on) {
     const url = triggerUrl(on ? house.on : house.off);
