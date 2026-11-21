@@ -210,11 +210,41 @@ button { cursor: pointer; }
 .house { display: flex; flex-direction: column; gap: 16px; }
 .lamp-row { display: flex; align-items: center; gap: 18px; }
 .lamp {
-  width: 92px; height: 92px; border-radius: 50%; flex: none; border: 1px solid var(--line);
-  background: var(--glass-hi); display: grid; place-items: center; transition: background .3s, box-shadow .3s;
+  position: relative; width: 92px; height: 92px; border-radius: 50%; flex: none; border: 1px solid var(--line);
+  background: var(--glass-hi); color: var(--muted); display: grid; place-items: center;
+  transition: background .4s var(--ease), color .4s var(--ease), box-shadow .4s var(--ease);
 }
-.lamp svg { width: 40px; height: 40px; }
-.lamp[aria-pressed="true"] { background: #ffd27a; color: #3a2400; box-shadow: 0 0 60px -6px rgba(255, 200, 100, .7); }
+.lamp svg { width: 40px; height: 40px; position: relative; z-index: 1; }
+.lamp[aria-pressed="true"] {
+  background: radial-gradient(circle at 40% 35%, #fff1c2, #ffd27a 55%, #f5b347);
+  color: #3a2400; border-color: transparent;
+  box-shadow: 0 0 0 6px rgba(255, 210, 122, calc(var(--glow, 1) * .14)), 0 0 calc(30px + var(--glow, 1) * 40px) calc(var(--glow, 1) * 6px) rgba(255, 196, 92, calc(.25 + var(--glow, 1) * .45));
+}
+.lamp[aria-pressed="true"] svg path:last-child { fill: rgba(255, 255, 255, .55); }
+.lamp[aria-pressed="true"]::after {
+  content: ""; position: absolute; inset: -14px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 130, calc(var(--glow, 1) * .38)), transparent 70%);
+  animation: halo 2.6s ease-in-out infinite;
+}
+@keyframes halo { 50% { transform: scale(1.1); opacity: .55; } }
+.lamp-state.on { color: #ffd27a; }
+.dimmer { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 18px; background: var(--glass); border: 1px solid var(--line); }
+.dimmer .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
+.dimmer .row b { font-family: var(--font-display); font-weight: 500; font-size: 18px; color: var(--fg); font-variant-numeric: tabular-nums; }
+.dim-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; border-radius: 12px; outline: none; cursor: pointer;
+  background: linear-gradient(90deg, #ffd27a var(--v, 100%), var(--glass-hi) var(--v, 100%)); }
+.dim-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.dim-slider::-moz-range-thumb { width: 26px; height: 26px; border: 0; border-radius: 50%; background: #fff; }
+.dim-slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 0 4px; }
+.ticks button { background: none; border: 0; padding: 2px 4px; border-radius: 6px; color: inherit; font-size: 12px; }
+.ticks button.cur { color: var(--fg); font-weight: 600; }
+.echo { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 18px; background: var(--glass); border: 1px solid var(--line); }
+.echo .row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
+.echo-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.echo-form .btn { display: inline-flex; align-items: center; gap: 8px; }
+.echo-form .btn svg { width: 16px; height: 16px; }
+.cfg .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .lamp-info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .lamp-name { font-family: var(--font-display); font-size: 20px; font-weight: 500; margin: 0; }
 .lamp-state { color: var(--muted); font-size: 14px; margin: 0; }
@@ -430,6 +460,18 @@ button { cursor: pointer; }
         </div>
       </div>
     </div>
+    <div class="dimmer">
+      <div class="row"><span>Luminosité</span><b id="dimVal">100 %</b></div>
+      <input class="dim-slider" id="lampDim" type="range" min="25" max="100" step="25" value="100" aria-label="Luminosité de la lampe" aria-valuetext="100 %">
+      <div class="ticks" id="dimTicks"><button type="button" data-lv="25">25 %</button><button type="button" data-lv="50">50 %</button><button type="button" data-lv="75">75 %</button><button type="button" data-lv="100">100 %</button></div>
+    </div>
+    <div class="echo">
+      <div class="row"><span>Parler sur l'Echo</span><span id="echoName">Echo de la chambre</span></div>
+      <form class="echo-form" id="echoForm" autocomplete="off">
+        <input class="field" id="echoText" type="text" maxlength="400" placeholder="Ex. : le repas est prêt !" aria-label="Texte à dire sur l'Echo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+        <button class="btn primary" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>Parler</button>
+      </form>
+    </div>
     <div id="scenes" hidden>
       <p class="cc-h"><span>Ambiances</span><button class="link-btn" id="scenesReload" type="button">Actualiser</button></p>
       <div class="scene-row" id="sceneRow"></div>
@@ -448,6 +490,15 @@ button { cursor: pointer; }
       <input class="field" id="urlOn" type="text" placeholder="ex. lampe-on" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <label for="urlOff">ID de l'appareil « lampe off » (ou lien complet)</label>
       <input class="field" id="urlOff" type="text" placeholder="ex. lampe-off" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+      <label>Routines de luminosité (ID ou lien complet)</label>
+      <div class="two">
+        <input class="field" id="lv25" type="text" placeholder="25 % : lampe-25" aria-label="Routine 25 %" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+        <input class="field" id="lv50" type="text" placeholder="50 % : lampe-50" aria-label="Routine 50 %" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+        <input class="field" id="lv75" type="text" placeholder="75 % : lampe-75" aria-label="Routine 75 %" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+        <input class="field" id="lv100" type="text" placeholder="100 % : lampe-100" aria-label="Routine 100 %" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+      </div>
+      <label for="echoId">ID de l'Echo pour les annonces</label>
+      <input class="field" id="echoId" type="text" placeholder="bedroom-echo-34jb5" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <p>Ces réglages restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
       <button class="btn primary" type="submit">Enregistrer</button>
     </form>
@@ -624,13 +675,26 @@ button { cursor: pointer; }
   // ID des routines Voice Monkey (non secrets : inutiles sans le token)
   if (!house.on) house.on = "lampe-tapo-on-n4fzs";
   if (!house.off) house.off = "lights-off-mskct";
+  const LEVELS = [25, 50, 75, 100];
+  house.levels = house.levels || {};
+  LEVELS.forEach((l) => { if (!house.levels[l]) house.levels[l] = "lampe-" + l; });
+  if (!house.echo) house.echo = "bedroom-echo-34jb5";
+  if (!house.level) house.level = 100;
+  const resolved = {}; // ID réels trouvés chez Voice Monkey (lien Claude)
   function renderHouse() {
     const nm = house.name || "la lampe";
     $("lampName").textContent = house.name || "Lampe Tapo";
     document.querySelectorAll(".lampSay").forEach((e) => { e.textContent = nm.toLowerCase(); });
     const ready = !!((typeof vmMcp !== "undefined" && vmMcp && deviceId(house.on) && deviceId(house.off)) || (triggerUrl(house.on) && triggerUrl(house.off)));
-    $("lampState").textContent = !ready ? "Pas encore reliée : touche « Configurer »" : house.state === true ? "Allumée" : house.state === false ? "Éteinte" : "Prête";
+    const st = $("lampState");
+    st.textContent = house.state === true ? "Allumée · " + house.level + " %" : house.state === false ? "Éteinte" : ready ? "Prête" : "Pas encore reliée : touche « Configurer »";
+    st.classList.toggle("on", house.state === true);
     $("lampBtn").setAttribute("aria-pressed", String(house.state === true));
+    $("lampBtn").style.setProperty("--glow", (0.35 + 0.65 * house.level / 100).toFixed(2));
+    const d = $("lampDim"); d.value = house.level; d.setAttribute("aria-valuetext", house.level + " %");
+    d.style.setProperty("--v", ((house.level - 25) / 75 * 100) + "%");
+    $("dimVal").textContent = house.level + " %";
+    [...$("dimTicks").children].forEach((b) => b.classList.toggle("cur", Number(b.dataset.lv) === house.level));
   }
   // Retrouve token et ID même dans un texte collé avec du superflu (guillemets, curl, code…)
   const grab = (txt, key) => { const m = (txt || "").match(new RegExp(key + "[\"']?\\s*[=:]\\s*[\"']?([A-Za-z0-9_\\-.%]+)", "i")); return m ? decodeURIComponent(m[1]) : ""; };
@@ -665,8 +729,17 @@ button { cursor: pointer; }
     if (!vmMcp) return;
     try {
       const res = await vmMcp.callTool("Voicemonkey", "list_devices", {});
-      const used = [deviceId(house.on), deviceId(house.off)];
-      const list = parseDevices(res).filter((d) => d && d.id && d.capability === "routines" && !used.includes(d.id));
+      const all = parseDevices(res).filter((d) => d && d.id);
+      const norm = (x) => (x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      LEVELS.forEach((l) => {
+        const want = deviceId(house.levels[l]);
+        const hit = all.find((d) => d.capability === "routines" && (d.id === want || new RegExp("^(lampe|lamp|light|lumiere)\\s*" + l + "(\\s|$)").test(norm(d.name)) || new RegExp("^(lampe|lamp)\\s*" + l + "(\\s|$)").test(norm(d.id))));
+        if (hit) resolved[l] = hit.id; else delete resolved[l];
+      });
+      const echo = all.find((d) => d.capability === "speakers" && d.id === deviceId(house.echo)) || all.find((d) => d.capability === "speakers");
+      if (echo) { if (!house.echoSet) house.echo = echo.id; $("echoName").textContent = echo.name || echo.id; }
+      const used = [deviceId(house.on), deviceId(house.off), ...Object.values(resolved)];
+      const list = all.filter((d) => d.capability === "routines" && !used.includes(d.id));
       const row = $("sceneRow"); row.replaceChildren();
       list.forEach((d) => {
         const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = d.name || d.id;
@@ -685,6 +758,72 @@ button { cursor: pointer; }
     if (d) return d;
     return /:\/\//.test(v) ? "" : v.replace(/[\s"'`]+/g, "");
   }
+  // Lance une routine Voice Monkey : connecteur Claude si dispo, sinon token. Renvoie true si OK.
+  async function runRoutine(value, label, realId) {
+    const dev = realId || deviceId(value);
+    if (vmMcp && dev) {
+      try { await vmMcp.callTool("Voicemonkey", "trigger", { routine: dev }); return true; }
+      catch (e) {
+        const c = e && e.code;
+        if (c === "tool_error") { toast("Voice Monkey ne trouve pas la routine « " + dev + " ». Crée-la, ou vérifie l'ID dans « Configurer »."); return false; }
+        if (c === "needs_reauth") { toast("Reconnecte Voice Monkey dans claude.ai → Paramètres → Connecteurs."); return false; }
+        if (c === "server_unavailable" || c === "upstream_error") { toast("Voice Monkey ne répond pas pour l'instant. Réessaie dans un moment."); return false; }
+      }
+    }
+    const url = triggerUrl(value);
+    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token dans « Configurer »"); return false; }
+    return callVm(url, label);
+  }
+  // Appel direct à l'API Voice Monkey (appli installée)
+  async function callVm(url, label) {
+    try {
+      const r = await fetch(url, { method: "GET" });
+      let body = null; try { body = await r.json(); } catch (e) {}
+      if (!r.ok || (body && body.success === false)) {
+        const why = (body && (body.error || body.message)) || ("code " + r.status);
+        toast("Voice Monkey a refusé « " + label + " » : " + why);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      try { await fetch(url, { method: "GET", mode: "no-cors" }); return true; }
+      catch (e2) { toast("Impossible de joindre Voice Monkey. Vérifie ta connexion."); return false; }
+    }
+  }
+  async function setLevel(l) {
+    const prev = house.level;
+    house.level = l; renderHouse();
+    const ok = await runRoutine(house.levels[l], "lampe " + l + " %", resolved[l]);
+    if (!ok) { house.level = prev; renderHouse(); return; }
+    house.state = true; store.set("tab.house", house); renderHouse();
+    toast("Luminosité : " + l + " %");
+  }
+  $("lampDim").addEventListener("input", (e) => { // aperçu pendant le glissement
+    const l = Number(e.target.value); $("dimVal").textContent = l + " %";
+    e.target.style.setProperty("--v", ((l - 25) / 75 * 100) + "%");
+  });
+  $("lampDim").addEventListener("change", (e) => setLevel(Number(e.target.value)));
+  $("dimTicks").addEventListener("click", (e) => { const b = e.target.closest("[data-lv]"); if (b) setLevel(Number(b.dataset.lv)); });
+
+  // Parler sur l'Echo
+  function echoToken() { return grab(house.token, "token") || (house.token || "").replace(/[\s"'`]+/g, "") || grab(house.on, "token") || grab(house.off, "token"); }
+  $("echoForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("echoText").value.trim(); if (!text) { $("echoText").focus(); return; }
+    const dev = deviceId(house.echo);
+    let ok = false;
+    if (vmMcp && dev) {
+      try { await vmMcp.callTool("Voicemonkey", "announce", { device: dev, text, language: "fr-FR" }); ok = true; }
+      catch (err) { if (err && err.code === "tool_error") { toast("Voice Monkey ne trouve pas l'Echo « " + dev + " »."); return; } }
+    }
+    if (!ok) {
+      const tk = echoToken();
+      if (!tk) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token dans « Configurer »"); return; }
+      ok = await callVm("https://api-v2.voicemonkey.io/announcement?token=" + encodeURIComponent(tk) + "&device=" + encodeURIComponent(dev) + "&text=" + encodeURIComponent(text), "annonce");
+    }
+    if (ok) { $("echoText").value = ""; toast("L'Echo va dire : « " + text + " »"); }
+  });
+
   async function lamp(on) {
     const dev = deviceId(on ? house.on : house.off);
     if (vmMcp && dev) {
@@ -724,10 +863,13 @@ button { cursor: pointer; }
   $("houseCfgBtn").addEventListener("click", () => {
     const f = $("houseCfg"); f.hidden = !f.hidden;
     $("lampNameIn").value = house.name; $("vmToken").value = house.token || ""; $("urlOn").value = house.on; $("urlOff").value = house.off;
+    LEVELS.forEach((l) => { $("lv" + l).value = house.levels[l] || ""; }); $("echoId").value = house.echo || "";
   });
   $("houseCfg").addEventListener("submit", (e) => {
     e.preventDefault();
     house.name = $("lampNameIn").value.trim(); house.token = $("vmToken").value.trim(); house.on = $("urlOn").value.trim(); house.off = $("urlOff").value.trim();
+    LEVELS.forEach((l) => { house.levels[l] = $("lv" + l).value.trim() || "lampe-" + l; });
+    const eid = $("echoId").value.trim(); if (eid && eid !== house.echo) house.echoSet = true; house.echo = eid || "bedroom-echo-34jb5";
     store.set("tab.house", house); $("houseCfg").hidden = true; renderHouse(); toast("Réglages de la lampe enregistrés");
   });
   renderHouse();
