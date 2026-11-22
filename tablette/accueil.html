@@ -178,6 +178,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 .city-form .field { flex: 1 1 140px; }
 .wmsg { color: var(--muted); margin: 0; font-size: 14px; }
 .wmsg.warn { color: #ffcf8a; }
+.wmsg.err { color: #ff9b8f; }
 .wx-empty { display: flex; align-items: center; gap: 16px; }
 .wx-empty svg { width: 56px; height: 56px; flex: none; opacity: .55; }
 
@@ -299,6 +300,14 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 .listen span { min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
 @keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 .dock .sys.on { background: var(--accent); color: var(--accent-ink); }
+.listen.err .lm { background: #ff9b8f; animation: none; }
+.listen.err span { color: #ffd2cc; }
+.cc-card.diag { margin-top: 12px; }
+.diag-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.diag-list li { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; }
+.diag-list b { font-weight: 500; color: var(--muted); }
+.diag-list span { overflow-wrap: anywhere; }
+.diag-act { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* mode veille */
 .saver {
@@ -683,6 +692,11 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
       <div class="voice-row"><span>Résumé du matin au premier toucher de la journée (avec la lampe à 25 %)</span><button class="switch" id="morningSw" type="button" role="switch" aria-checked="true" aria-label="Résumé du matin automatique"></button></div>
       <div class="voice-row" style="margin-top:12px"><span>Vitesse de la voix</span><input id="rate" type="range" min="0.7" max="1.4" step="0.1" value="1" aria-label="Vitesse de la voix" style="width:50%"></div>
     </div>
+  </div>
+  <div class="cc-card diag">
+    <p class="cc-h"><span>Diagnostic</span></p>
+    <ul class="diag-list" id="diagList"></ul>
+    <div class="diag-act"><button class="btn" type="button" id="diagWx">Tester la météo</button><button class="btn" type="button" id="diagMic">Tester le micro</button></div>
   </div>
   <button class="cc-close" id="ccClose" type="button">Fermer</button>
 </aside>
@@ -1205,118 +1219,142 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     if (c <= 86) return ["snow", "Averses de neige"];
     return ["storm", "Orage"];
   }
-  let lastWeather = null;
-  // État de la météo : on n'efface JAMAIS une météo affichée ; en cas d'échec on garde
-  // la dernière connue (avec l'heure) et on réessaie toutes les 10 minutes.
-  let wxShown = false, wxBusy = false, wxFailed = false, wxRetry = null, wxNextTry = 0;
-  const WX_RETRY_MS = 10 * 60 * 1000, WX_REFRESH_MS = 30 * 60 * 1000, WX_TIMEOUT_MS = 12000;
+  // ---------- météo : base Open-Meteo fournie (gratuit, sans clé) ----------
+  // Ajouts à la base : délai maximum de 12 s et message d'erreur précis (getJSON),
+  // prévisions sur 5 jours, délai pour la localisation, mémorisation de « Ma position ».
+  const WX_TIMEOUT_MS = 12000, WX_RETRY_MS = 10 * 60 * 1000, WX_REFRESH_MS = 30 * 60 * 1000;
+  const diag = { wx: "pas encore essayé", wxAt: 0, mic: "pas encore essayé" };
+  const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
   const hm = (t) => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  async function getJSON(url) {
+    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), WX_TIMEOUT_MS);
+    try {
+      const r = await fetch(url, { signal: ctl.signal, cache: "no-store" });
+      if (!r.ok) throw new Error("le service répond « HTTP " + r.status + " »" + (r.status === 429 ? " (trop de demandes)" : ""));
+      return await r.json();
+    } catch (e) {
+      if (e.name === "AbortError") throw new Error("délai dépassé (" + WX_TIMEOUT_MS / 1000 + " s sans réponse)");
+      if (e instanceof TypeError) throw new Error("connexion impossible (" + (navigator.onLine === false ? "pas d'internet" : "réseau bloqué ou service injoignable") + ")");
+      throw e;
+    } finally { clearTimeout(tm); }
+  }
+  async function meteoParVille(ville) {
+    const geo = await getJSON(
+      "https://geocoding-api.open-meteo.com/v1/search?name=" +
+      encodeURIComponent(ville) + "&count=1&language=fr"
+    );
+    if (!geo.results || !geo.results.length) throw new Error("Ville introuvable");
+    const { latitude, longitude, name } = geo.results[0];
+    localStorage.setItem("ville", JSON.stringify({ latitude, longitude, name }));
+    return meteoParCoordonnees(latitude, longitude, name);
+  }
+  async function meteoParCoordonnees(lat, lon, nom = "Ma position") {
+    const data = await getJSON(
+      "https://api.open-meteo.com/v1/forecast?latitude=" + lat +
+      "&longitude=" + lon + "&current=temperature_2m,weather_code&timezone=auto" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=5"
+    );
+    if (!data.current || typeof data.current.temperature_2m !== "number") throw new Error("réponse météo incomplète");
+    const meteo = { nom, temp: Math.round(data.current.temperature_2m),
+                    code: data.current.weather_code, maj: Date.now(), jours: data.daily || null };
+    localStorage.setItem("derniereMeteo", JSON.stringify(meteo));
+    return meteo;
+  }
+  function meteoMaPosition() {
+    return new Promise((ok, ko) => {
+      if (!navigator.geolocation) { ko(new Error("Localisation non disponible sur cet appareil")); return; }
+      navigator.geolocation.getCurrentPosition(
+        p => {
+          localStorage.setItem("ville", JSON.stringify({ latitude: p.coords.latitude, longitude: p.coords.longitude, name: "Ma position" }));
+          ok(meteoParCoordonnees(p.coords.latitude, p.coords.longitude));
+        },
+        e => ko(new Error("Localisation refusée : " + e.message)),
+        { timeout: 10000, maximumAge: 30 * 60 * 1000 });
+    });
+  }
+  // reprise des anciennes données (ville et dernière météo de la version précédente)
+  (function migrer() {
+    try {
+      const old = store.get("tab.loc", null);
+      if (!readJSON("ville") && old && old.lat != null) localStorage.setItem("ville", JSON.stringify({ latitude: Number(old.lat), longitude: Number(old.lon), name: old.name || "Ma position" }));
+      const ow = store.get("tab.wx", null);
+      if (!readJSON("derniereMeteo") && ow && ow.d && ow.d.current) localStorage.setItem("derniereMeteo", JSON.stringify({ nom: (ow.loc && ow.loc.name) || "", temp: Math.round(ow.d.current.temperature_2m), code: ow.d.current.weather_code, maj: ow.at, jours: ow.d.daily || null }));
+    } catch (e) {}
+  })();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+
+  let lastWeather = null, wxShown = false, wxBusy = false, wxFailed = false, wxNextTry = 0;
   function wxWhen(at) {
     const d = new Date(at), y = new Date(); y.setDate(y.getDate() - 1);
     if (keyOf(d) === keyOf(new Date())) return "à " + hm(at);
     if (keyOf(d) === keyOf(y)) return "hier à " + hm(at);
     return "le " + d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " à " + hm(at);
   }
-  function wxStatus(text, warn) { const u = $("wUpd"); if (u) { u.textContent = text; u.classList.toggle("warn", !!warn); } }
-  function showCityForm(msg) { $("cityForm").hidden = false; if (msg) toast(msg); } // ne remplace plus la météo
-  function validWx(d) { return !!(d && d.current && typeof d.current.temperature_2m === "number" && d.daily && Array.isArray(d.daily.time) && d.daily.time.length); }
-  function renderWeather(d, loc, at) {
-    $("wcity").textContent = loc && loc.name ? "· " + loc.name : "";
-    const [ic, label] = wmo(d.current.weather_code);
-    lastWeather = { ic, dayIc: wmo(d.daily.weather_code[0])[0], t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
-    let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
-      '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
-    html += '<div class="wdays">';
-    d.daily.time.forEach((t, i) => {
-      const day = new Date(t + "T12:00");
-      const lbl = keyOf(day) === keyOf(new Date()) ? "Auj." : day.toLocaleDateString("fr-FR", { weekday: "short" });
-      html += '<div class="wday"><div class="d">' + lbl + "</div>" + ICON[wmo(d.daily.weather_code[i])[0]] +
-        '<div class="t">' + Math.round(d.daily.temperature_2m_max[i]) + "° <span>" + Math.round(d.daily.temperature_2m_min[i]) + "°</span></div></div>";
-    });
-    html += '</div><p class="wmsg" id="wUpd"></p>';
+  function afficherMeteo(m) {
+    const [ic, label] = wmo(m.code);
+    const j = m.jours && Array.isArray(m.jours.time) && m.jours.time.length ? m.jours : null;
+    lastWeather = { ic, dayIc: j ? wmo(j.weather_code[0])[0] : ic, t: m.temp, label, city: m.nom,
+      max: j ? Math.round(j.temperature_2m_max[0]) : m.temp, min: j ? Math.round(j.temperature_2m_min[0]) : m.temp };
+    $("wcity").textContent = m.nom ? "· " + m.nom : "";
+    let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + m.temp + '°</p><p class="wdesc">' + label +
+      (j ? " · max " + lastWeather.max + "° · min " + lastWeather.min + "°" : "") + "</p></div></div>";
+    if (j) {
+      html += '<div class="wdays">';
+      j.time.forEach((t, i) => {
+        const day = new Date(t + "T12:00");
+        const lbl = keyOf(day) === keyOf(new Date()) ? "Auj." : day.toLocaleDateString("fr-FR", { weekday: "short" });
+        html += '<div class="wday"><div class="d">' + lbl + "</div>" + ICON[wmo(j.weather_code[i])[0]] +
+          '<div class="t">' + Math.round(j.temperature_2m_max[i]) + "° <span>" + Math.round(j.temperature_2m_min[i]) + "°</span></div></div>";
+      });
+      html += "</div>";
+    }
+    html += '<p class="wmsg" id="wUpd">Mis à jour ' + wxWhen(m.maj) + '</p><p class="wmsg err" id="wErr" hidden></p>';
     $("wbody").innerHTML = html;
-    wxStatus("Mis à jour " + wxWhen(at));
-    $("sWeather").textContent = lastWeather.t + "° " + label.toLowerCase();
-    $("cityForm").hidden = true;
+    $("sWeather").textContent = m.temp + "° " + label.toLowerCase();
     wxShown = true;
     relayout();
   }
-  function renderWxPlaceholder(msg) {
-    if (wxShown) { wxStatus(msg, true); return; }
-    $("wbody").innerHTML = '<div class="wx-empty">' + ICON.cloud + '<p class="wmsg warn" id="wUpd"></p></div>';
-    wxStatus(msg, true);
+  // erreur affichée dans la carte, sous la dernière météo connue
+  function wxError(msg) {
+    diag.wx = "échec " + wxWhen(Date.now()) + " : " + msg; diag.wxAt = Date.now();
+    if (!wxShown) $("wbody").innerHTML = '<div class="wx-empty">' + ICON.cloud + '<div><p class="wmsg" id="wUpd">Aucune météo enregistrée pour l\'instant.</p><p class="wmsg err" id="wErr"></p></div></div>';
+    const e = $("wErr"); e.textContent = "Erreur météo : " + msg + (wxNextTry ? " · nouvel essai à " + hm(wxNextTry) : ""); e.hidden = false;
+    renderDiag();
   }
-  async function fetchWx(loc) {
-    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
-      "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5";
-    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), WX_TIMEOUT_MS);
+  async function chargerMeteo(source) {
+    if (wxBusy) return;
+    wxBusy = true;
     try {
-      const r = await fetch(url, { signal: ctl.signal, cache: "no-store" });
-      if (!r.ok) { const e = new Error("http"); e.why = r.status === 429 ? "service météo surchargé" : "service météo indisponible"; throw e; }
-      const d = await r.json();
-      if (!validWx(d)) { const e = new Error("bad"); e.why = "réponse incomplète"; throw e; }
-      return d;
-    } catch (e) {
-      if (e.name === "AbortError") e.why = "délai dépassé";
-      else if (!e.why) e.why = navigator.onLine === false ? "pas de connexion" : "connexion impossible";
-      throw e;
-    } finally { clearTimeout(tm); }
-  }
-  async function loadWeather(loc) {
-    if (!loc || wxBusy) return;
-    wxBusy = true; clearTimeout(wxRetry);
-    try {
-      const d = await fetchWx(loc);
-      const at = Date.now();
-      store.set("tab.wx", { d, loc, at });
-      wxFailed = false;
-      renderWeather(d, loc, at);
+      const m = await source();
+      wxFailed = false; diag.wx = "OK " + wxWhen(Date.now()); diag.wxAt = Date.now();
+      afficherMeteo(m); $("cityForm").hidden = true; renderDiag();
     } catch (e) {
       wxFailed = true; wxNextTry = Date.now() + WX_RETRY_MS;
-      wxRetry = setTimeout(() => loadWeather(store.get("tab.loc", loc)), WX_RETRY_MS);
-      const c = store.get("tab.wx", null);
-      const again = "nouvel essai à " + hm(wxNextTry);
-      if (wxShown && c) wxStatus("Dernière mise à jour " + wxWhen(c.at) + " · " + e.why + " · " + again, true);
-      else renderWxPlaceholder(framed ? "Dans le lien Claude, la météo est bloquée : ouvre l'appli installée pour l'avoir." : "Météo indisponible pour l'instant (" + e.why + ") · " + again);
+      wxError((e && e.message) || String(e));
     } finally { wxBusy = false; }
   }
-  async function findCity(q) {
-    try {
-      const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name=" + encodeURIComponent(q));
-      const d = await r.json();
-      if (!d.results || !d.results.length) { toast("Ville introuvable. Vérifie l'orthographe."); return; }
-      const c = d.results[0]; const loc = { lat: c.latitude, lon: c.longitude, name: c.name };
-      store.set("tab.loc", loc); wxBusy = false; loadWeather(loc);
-    } catch (e) { toast("Recherche de ville impossible pour l'instant. Réessaie dans un moment."); }
+  function refreshWx() {
+    const v = readJSON("ville");
+    if (v && v.latitude != null) return chargerMeteo(() => meteoParCoordonnees(v.latitude, v.longitude, v.name));
+    return chargerMeteo(meteoMaPosition).then(() => { if (wxFailed) $("cityForm").hidden = false; });
   }
-  function useGeo() {
-    if (!navigator.geolocation) { showCityForm("Indique ta ville pour voir la météo."); return; }
-    navigator.geolocation.getCurrentPosition(
-      (p) => { const loc = { lat: p.coords.latitude.toFixed(3), lon: p.coords.longitude.toFixed(3), name: "Ma position" }; store.set("tab.loc", loc); loadWeather(loc); },
-      () => showCityForm(wxShown ? "Position introuvable. Tu peux taper ta ville." : ""), { timeout: 8000 });
-  }
-  $("cityForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("cityInput").value.trim(); if (q) findCity(q); });
-  $("geoBtn").addEventListener("click", useGeo);
+  $("cityForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("cityInput").value.trim(); if (q) chargerMeteo(() => meteoParVille(q)); });
+  $("geoBtn").addEventListener("click", () => chargerMeteo(meteoMaPosition));
   $("wchange").addEventListener("click", () => { $("cityForm").hidden = !$("cityForm").hidden; if (!$("cityForm").hidden) $("cityInput").focus(); });
-  // Demande à Android de ne pas effacer les données de la page (ville, dernière météo, réglages)
-  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
-  const savedLoc = store.get("tab.loc", null);
-  const cachedWx = store.get("tab.wx", null);
-  if (cachedWx && validWx(cachedWx.d)) { try { renderWeather(cachedWx.d, cachedWx.loc || savedLoc, cachedWx.at); } catch (e) {} }
-  const startLoc = savedLoc || (cachedWx && cachedWx.loc);
-  if (startLoc) { if (!savedLoc) store.set("tab.loc", startLoc); loadWeather(startLoc); }
-  else { renderWxPlaceholder("Indique ta ville, ou touche « Ma position », pour voir la météo."); $("cityForm").hidden = false; useGeo(); }
-  const refreshWx = () => { const l = store.get("tab.loc", null); if (l) loadWeather(l); };
-  // vérification chaque minute : réessai 10 min après un échec, sinon actualisation toutes les 30 min
+  // démarrage : dernière météo connue tout de suite, puis actualisation
+  const derniere = readJSON("derniereMeteo");
+  if (derniere && typeof derniere.temp === "number") { try { afficherMeteo(derniere); } catch (e) {} }
+  refreshWx();
+  // chaque minute : nouvel essai 10 min après un échec, sinon actualisation toutes les 30 min
   setInterval(() => {
-    const c = store.get("tab.wx", null);
-    if (wxFailed ? Date.now() >= wxNextTry : !c || Date.now() - c.at >= WX_REFRESH_MS) refreshWx();
+    const d = readJSON("derniereMeteo");
+    if (wxFailed ? Date.now() >= wxNextTry : !d || Date.now() - d.maj >= WX_REFRESH_MS) refreshWx();
   }, 60 * 1000);
-  window.addEventListener("online", refreshWx);
+  window.addEventListener("online", () => refreshWx());
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
-    const c = store.get("tab.wx", null);
-    if (wxFailed || !c || Date.now() - c.at > 15 * 60 * 1000) refreshWx();
+    const d = readJSON("derniereMeteo");
+    if (wxFailed || !d || Date.now() - d.maj > 15 * 60 * 1000) refreshWx();
   });
 
   // ---------- agenda ----------
@@ -1484,11 +1522,13 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     $("mcard").hidden = false; clearTimeout(mcardT); mcardT = setTimeout(() => { $("mcard").hidden = true; }, 30000);
   }
   $("mcardX").addEventListener("click", () => { $("mcard").hidden = true; stopSpeak(); });
+  // chaque étape est indépendante : sans météo (ou sans voix), le reste du résumé fonctionne quand même
   function morningSummary() {
-    const p = morningParts();
-    showMorningCard(p);
-    say([p.title + ".", p.wx, p.adv, p.ev, "J'allume la lampe en douceur."].filter(Boolean).join(" "));
-    runRoutine(house.levels[25], "lampe 25 %").then((ok) => { if (ok) setLamp(true, 25); });
+    let p;
+    try { p = morningParts(); } catch (e) { p = { title: greetText(new Date().getHours()), wx: "Je n'ai pas encore la météo du jour.", adv: "", ev: "" }; }
+    try { showMorningCard(p); } catch (e) {}
+    try { say([p.title + ".", p.wx, p.adv, p.ev, "J'allume la lampe en douceur."].filter(Boolean).join(" ")); } catch (e) {}
+    try { runRoutine(house.levels[25], "lampe 25 %").then((ok) => { if (ok) setLamp(true, 25); }); } catch (e) {}
   }
   document.addEventListener("pointerdown", (e) => {
     if (!morning) return;
@@ -1501,6 +1541,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 
   // ---------- centre de contrôle ----------
   function openCC(on) {
+    if (on) { lirePermissions(); }
     document.body.classList.toggle("cc-open", on);
     $("cc").setAttribute("aria-hidden", String(!on));
     if (on) $("ccClose").focus({ preventScroll: true });
@@ -1809,71 +1850,127 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
   document.addEventListener("visibilitychange", () => { if (!document.hidden) checkSuggest(); });
   setTimeout(checkSuggest, 3000);
 
-  // ---------- commande vocale (français) ----------
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let dictCap = null, listening = false, rec = null;
+  // ---------- commande vocale : base fournie ----------
+  // Ajouts à la base : 3e paramètre « fin » (pour masquer l'indicateur) et « return rec ».
+  function lancerMicro(afficher, executer, fin) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { afficher("Reconnaissance vocale non disponible sur ce navigateur"); return null; }
+    const rec = new SR();
+    rec.lang = "fr-FR";
+    rec.interimResults = true;
+    rec.onresult = e => {
+      const texte = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
+      afficher(texte);
+      if (e.results[e.results.length - 1].isFinal) {
+        if (texte.includes("film")) executer("soiree-film");
+        else if (texte.includes("dodo") || texte.includes("éteins")) executer("dodo");
+        else if (texte.includes("25")) executer("lampe-25");
+        else if (texte.includes("allume") || texte.includes("réveil")) executer("allumer");
+        else afficher("Je n'ai pas compris : " + texte);
+      }
+    };
+    rec.onerror = e => afficher("Erreur micro : " + e.error);
+    if (fin) rec.onend = fin;
+    rec.start();
+    return rec;
+  }
+  // explication en français des codes d'erreur du micro
+  const MIC_ERR = {
+    "not-allowed": "micro refusé : autorise-le pour cette appli (Paramètres du site → Micro)",
+    "service-not-allowed": "service vocal refusé : autorise le micro, ou vérifie que la saisie vocale Google est activée",
+    "no-speech": "aucune voix entendue, réessaie en parlant plus près",
+    "audio-capture": "aucun micro trouvé ou micro occupé par une autre appli",
+    "network": "la reconnaissance vocale de Chrome a besoin d'internet",
+    "aborted": "écoute interrompue",
+    "language-not-supported": "le français n'est pas disponible pour la reconnaissance vocale"
+  };
+  let micRec = null, micMsgT = null, dictCap = null;
   const micBtn = () => document.querySelector('.dock [data-k="mic"] .sys');
-  function setHeard(t) { $("heard").textContent = t || "Je t'écoute…"; }
-  function setListening(on) { listening = on; $("listen").hidden = !on; const b = micBtn(); if (b) b.classList.toggle("on", on); if (on) setHeard(""); }
-  if (window.claude && typeof window.claude.use === "function") { // lien Claude : dictée fournie par Claude
+  function setHeard(t, kind) { const h = $("heard"); h.textContent = t || "Je t'écoute…"; $("listen").classList.toggle("err", kind === "err"); }
+  function setListening(on) { $("listen").hidden = !on; const b = micBtn(); if (b) b.classList.toggle("on", on); if (on) setHeard(""); }
+  function garderMessage(ms) { clearTimeout(micMsgT); $("listen").hidden = false; micMsgT = setTimeout(() => { if (!micRec) setListening(false); }, ms); }
+  function afficherVoix(t) {
+    const m = /^Erreur micro : (.+)$/.exec(t);
+    if (m) {
+      const msg = "Erreur micro : " + m[1] + (MIC_ERR[m[1]] ? " — " + MIC_ERR[m[1]] : "");
+      diag.mic = "échec " + hm(Date.now()) + " : " + msg; renderDiag();
+      setHeard(msg, "err"); garderMessage(9000); return;
+    }
+    if (/^Reconnaissance vocale non disponible|^Je n'ai pas compris/.test(t)) {
+      if (/^Reconnaissance/.test(t)) { diag.mic = t; renderDiag(); }
+      setHeard(t, "err"); garderMessage(6000); return;
+    }
+    setHeard(t);
+  }
+  function executerVoix(action) {
+    diag.mic = "OK " + hm(Date.now()) + " : " + action; renderDiag();
+    if (action === "soiree-film") playScene("film", sceneBtn("film"), true);
+    else if (action === "dodo") playScene("dodo", sceneBtn("dodo"));
+    else if (action === "lampe-25") setLevel(25);
+    else if (action === "allumer") lamp(true);
+    garderMessage(1500);
+  }
+  // même tri des phrases que la base, pour la dictée du lien Claude
+  function deciderTexte(texte) {
+    texte = (texte || "").toLowerCase(); afficherVoix(texte);
+    if (texte.includes("film")) executerVoix("soiree-film");
+    else if (texte.includes("dodo") || texte.includes("éteins")) executerVoix("dodo");
+    else if (texte.includes("25")) executerVoix("lampe-25");
+    else if (texte.includes("allume") || texte.includes("réveil")) executerVoix("allumer");
+    else afficherVoix("Je n'ai pas compris : " + texte);
+  }
+  if (framed && window.claude && typeof window.claude.use === "function") { // lien Claude : dictée de Claude
     window.claude.use("dictation").then((d) => {
       if (!d) return; dictCap = d;
       d.onPartial(({ text }) => setHeard(text));
-      d.onFinal(({ text }) => { if (text && text.trim()) { setHeard(text); stopVoice(); runVoice([text]); } });
-      d.onState(({ state }) => { if (state !== "listening" && listening && !rec) setListening(false); });
+      d.onFinal(({ text }) => { if (text && text.trim()) { try { d.stop(); } catch (e) {} deciderTexte(text); } });
+      d.onState(({ state, reason }) => { if (state === "idle" && !$("listen").classList.contains("err")) garderMessage(1500); });
     }).catch(() => {});
   }
   function startVoice() {
-    if (listening) { stopVoice(); return; }
+    if (micRec) { try { micRec.stop(); } catch (e) {} return; }
+    clearTimeout(micMsgT); setListening(true);
     if (framed && dictCap) {
-      setListening(true);
-      dictCap.start().catch((e) => { setListening(false); toast(e && e.code === "not_granted" ? "Le micro n'est pas autorisé pour cette page." : "Le micro ne répond pas."); });
+      dictCap.start().catch((e) => afficherVoix("Erreur micro : " + ((e && e.code) || "inconnue")));
       return;
     }
-    if (!SR) { toast("La commande vocale n'est pas disponible ici. Utilise l'appli installée dans Chrome."); return; }
-    rec = new SR(); rec.lang = "fr-FR"; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
-    rec.onresult = (ev) => {
-      const r = ev.results[ev.results.length - 1];
-      if (r.isFinal) { const alts = Array.from(r).map((a) => a.transcript); setHeard(alts[0]); runVoice(alts); }
-      else setHeard(r[0].transcript);
-    };
-    rec.onerror = (ev) => {
-      const msg = { "not-allowed": "Autorise le micro pour Accueil dans les réglages de Chrome.", "service-not-allowed": "Autorise le micro pour Accueil dans les réglages de Chrome.",
-        "no-speech": "Je n'ai rien entendu. Touche le micro et parle.", "network": "La reconnaissance vocale a besoin d'internet.", "audio-capture": "Aucun micro trouvé." }[ev.error];
-      if (msg) toast(msg);
-    };
-    rec.onend = () => { rec = null; setListening(false); };
-    try { rec.start(); setListening(true); } catch (e) { rec = null; toast("Le micro ne répond pas."); }
+    try {
+      micRec = lancerMicro(afficherVoix, executerVoix, () => { micRec = null; if (!$("listen").classList.contains("err")) garderMessage(1200); });
+    } catch (e) { micRec = null; afficherVoix("Erreur micro : " + ((e && e.message) || e)); }
   }
-  function stopVoice() {
-    try { if (rec) rec.stop(); } catch (e) {}
-    try { if (dictCap && !rec) dictCap.stop(); } catch (e) {}
-    setListening(false);
+
+  // ---------- diagnostic (Contrôle → Diagnostic) ----------
+  const BUILD = "22 nov. 2026";
+  function modeAppli() {
+    if (framed) return "lien Claude (météo et micro du navigateur bloqués ici)";
+    if (window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches) return "appli installée";
+    return "onglet Chrome";
   }
-  const fold = (t) => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  function parseVoice(t) {
-    const n = fold(t);
-    if (/soiree film|\bfilm\b|cinema|netflix/.test(n)) return "film";
-    if (/\breveil|\breveille/.test(n)) return "reveil";
-    if (/\bdodo\b|bonne nuit|dormir|coucher/.test(n)) return "dodo";
-    if (/(\b25\b|vingt[- ]?cinq)/.test(n)) return "l25";
-    if (/(\b100\b|cent pour ?cent|a fond|maximum)/.test(n)) return "l100";
-    if (/eteins|eteint|eteindre|eteigne|coupe la|arrete la (lampe|lumiere)/.test(n)) return "off";
-    if (/allume|allumer/.test(n)) return "on";
-    return null;
+  const permTxt = { granted: "autorisé", denied: "refusé", prompt: "à demander" };
+  const permState = { geo: "?", mic: "?" };
+  async function lirePermissions() {
+    try { permState.geo = permTxt[(await navigator.permissions.query({ name: "geolocation" })).state] || "?"; } catch (e) { permState.geo = "inconnu"; }
+    try { permState.mic = permTxt[(await navigator.permissions.query({ name: "microphone" })).state] || "?"; } catch (e) { permState.mic = "inconnu"; }
+    renderDiag();
   }
-  function runVoice(alts) {
-    let cmd = null, heard = alts[0] || "";
-    for (const a of alts) { const c = parseVoice(a); if (c) { cmd = c; heard = a; break; } }
-    if (!cmd) { toast("Je n'ai pas compris « " + heard.trim() + " ». Essaie « allume la lampe » ou « dodo »."); return; }
-    const reply = { film: "Soirée film, c'est parti.", reveil: "Bonjour " + NAME + ".", dodo: "Bonne nuit " + NAME + ".", l25: "Lampe à vingt-cinq pour cent.", l100: "Lampe à fond.", off: "J'éteins la lampe.", on: "J'allume la lampe." }[cmd];
-    if (cmd === "film" || cmd === "reveil" || cmd === "dodo") playScene(cmd, sceneBtn(cmd), true);
-    else if (cmd === "l25") setLevel(25);
-    else if (cmd === "l100") setLevel(100);
-    else lamp(cmd === "on");
-    if (cmd !== "dodo") say(reply); else toast(reply);
+  function renderDiag() {
+    const ul = $("diagList"); if (!ul) return;
+    const rows = [
+      ["Mode", modeAppli()],
+      ["Internet", navigator.onLine === false ? "hors ligne" : "en ligne"],
+      ["Météo", diag.wx],
+      ["Localisation", permState.geo],
+      ["Micro", permState.mic],
+      ["Reconnaissance vocale", (window.SpeechRecognition || window.webkitSpeechRecognition) ? "disponible" : "non disponible sur ce navigateur"],
+      ["Dernier essai micro", diag.mic],
+      ["Version", BUILD]
+    ];
+    ul.replaceChildren(...rows.map(([k, v]) => { const li = document.createElement("li"); const b = document.createElement("b"); b.textContent = k; const sp = document.createElement("span"); sp.textContent = v; li.append(b, sp); return li; }));
   }
-  window.__voiceTest = runVoice; // utilisé pour les tests automatiques
+  $("diagWx").addEventListener("click", () => { $("diagWx").textContent = "Test en cours…"; refreshWx().finally(() => { $("diagWx").textContent = "Tester la météo"; }); });
+  $("diagMic").addEventListener("click", () => { openCC(false); startVoice(); });
+  window.addEventListener("online", renderDiag); window.addEventListener("offline", renderDiag);
+  lirePermissions(); renderDiag();
 
   // minuteur
   let timerEnd = 0, timerInt = null;

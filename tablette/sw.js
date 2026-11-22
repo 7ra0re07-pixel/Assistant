@@ -1,6 +1,6 @@
 // Service worker : permet d'installer la page comme une application
 // et de l'ouvrir même sans internet (la dernière version est gardée en cache).
-const CACHE = "accueil-v1";
+const CACHE = "accueil-v2";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
