@@ -17,6 +17,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;500;600&family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Layout: barre d'état en haut, grille de widgets en verre (ordre modifiable), dock flottant en bas, centre de contrôle qui glisse depuis le haut. Look sombre assumé. */
+/* couleurs animables : le thème change en douceur selon l'heure */
+@property --bg { syntax: "<color>"; inherits: true; initial-value: #0b0f1a; }
+@property --glow-1 { syntax: "<color>"; inherits: true; initial-value: rgba(255, 140, 90, 0.22); }
+@property --glow-2 { syntax: "<color>"; inherits: true; initial-value: rgba(70, 130, 255, 0.20); }
+@property --glow-3 { syntax: "<color>"; inherits: true; initial-value: rgba(180, 90, 255, 0.10); }
+@property --accent { syntax: "<color>"; inherits: true; initial-value: #ff9a62; }
 :root {
   --bg: #0b0f1a;
   --glow-1: rgba(255, 140, 90, 0.22);
@@ -37,6 +43,7 @@
   --r: 26px;
   --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: dark;
+  transition: --bg 4s ease, --glow-1 4s ease, --glow-2 4s ease, --glow-3 4s ease, --accent 4s ease;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
@@ -106,11 +113,17 @@ button { cursor: pointer; }
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   box-shadow: 0 20px 50px -30px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
-  animation: rise .7s var(--ease) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  /* fondu d'apparition : seulement au chargement (classe booting) */
   transition: transform .35s var(--ease), box-shadow .35s var(--ease);
 }
-@keyframes rise { from { transform: translateY(14px) scale(.985); opacity: .5; } to { transform: none; opacity: 1; } }
+body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise { from { transform: translateY(18px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+/* léger rebond au toucher */
+.w.bump { animation: bump .42s var(--ease); }
+@keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(.985); } 70% { transform: scale(1.006); } 100% { transform: scale(1); } }
+/* mise en avant (scène Réveil → météo) */
+.w.flash { animation: flash 1.9s var(--ease); }
+@keyframes flash { 0%, 100% { box-shadow: 0 20px 50px -30px rgba(0,0,0,.6); } 30% { box-shadow: 0 0 0 2px var(--accent), 0 0 48px -4px var(--accent); } }
 .w.span-7 { grid-column: span 7; }
 .w.span-5 { grid-column: span 5; }
 .w.span-12 { grid-column: span 12; }
@@ -206,6 +219,49 @@ button { cursor: pointer; }
 .grid button.today.has::after { background: var(--accent-ink); }
 .ev-form { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; }
 .ev-day { font-size: 13px; color: var(--muted); margin: 0; }
+/* scènes */
+.mood-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.mood {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-height: 136px; padding: 16px; border-radius: 22px; border: 1px solid var(--line); text-align: left; color: var(--fg);
+  background: var(--mood-bg); transition: transform .2s var(--ease), box-shadow .3s var(--ease);
+}
+.mood:hover { box-shadow: 0 14px 34px -18px rgba(0,0,0,.8); }
+.mood:active { transform: scale(.96); }
+.mood .mi { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,.14); margin-bottom: auto; }
+.mood .mi svg { width: 24px; height: 24px; }
+.mood .mt { font-family: var(--font-display); font-weight: 500; font-size: 19px; margin-top: 14px; }
+.mood .ms { font-size: 12.5px; color: rgba(238,241,248,.72); }
+.mood.film { --mood-bg: linear-gradient(150deg, rgba(229,9,20,.34), rgba(90,30,140,.26)); }
+.mood.reveil { --mood-bg: linear-gradient(150deg, rgba(255,196,92,.36), rgba(80,170,255,.24)); }
+.mood.dodo { --mood-bg: linear-gradient(150deg, rgba(90,100,220,.34), rgba(20,24,60,.5)); }
+.mood.busy::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.18) 50%, transparent 80%); animation: sweep 1s linear infinite; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* mode veille */
+.saver {
+  position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; overflow: hidden; cursor: pointer;
+  background: var(--bg); opacity: 0; visibility: hidden; transition: opacity .9s var(--ease), visibility 0s .9s;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.saver-on .saver { opacity: 1; visibility: visible; transition: opacity .9s var(--ease); }
+.saver-bg { position: absolute; inset: 0; transition: opacity 1s; }
+.saver-bg i { position: absolute; width: 85vmax; height: 85vmax; border-radius: 50%; }
+.saver-bg i:nth-child(1) { left: -32vmax; top: -34vmax; background: radial-gradient(circle, var(--glow-1), transparent 62%); animation: drift1 46s ease-in-out infinite alternate; }
+.saver-bg i:nth-child(2) { right: -36vmax; bottom: -38vmax; background: radial-gradient(circle, var(--glow-2), transparent 62%); animation: drift2 54s ease-in-out infinite alternate; }
+.saver-bg i:nth-child(3) { left: 20vw; top: 10vh; width: 60vmax; height: 60vmax; background: radial-gradient(circle, var(--glow-3), transparent 65%); animation: drift3 38s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(26vw, 20vh) scale(1.18); } }
+@keyframes drift2 { to { transform: translate(-24vw, -16vh) scale(1.12); } }
+@keyframes drift3 { to { transform: translate(-18vw, 22vh) scale(.88); } }
+.saver-in { position: relative; text-align: center; transition: transform 3s var(--ease), opacity .8s; }
+.sv-time { font-family: var(--font-display); font-weight: 200; font-size: clamp(96px, 21vw, 280px); line-height: .9; letter-spacing: -.045em; margin: 0; font-variant-numeric: tabular-nums; }
+.sv-date { font-family: var(--font-display); font-weight: 300; font-size: clamp(20px, 2.6vw, 32px); margin: 16px 0 0; }
+.sv-wx { display: inline-flex; align-items: center; gap: 12px; margin: 22px 0 0; font-size: clamp(17px, 2vw, 24px); color: var(--muted); }
+.sv-wx svg { width: 44px; height: 44px; flex: none; }
+.sv-hint { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); margin: 0; text-align: center; font-size: 13px; color: var(--muted); opacity: .6; }
+.saver.dodo .saver-in { opacity: .5; }
+.saver.dodo .saver-bg { opacity: .45; }
+
 /* maison */
 .house { display: flex; flex-direction: column; gap: 16px; }
 .lamp-row { display: flex; align-items: center; gap: 18px; }
@@ -314,7 +370,9 @@ button { cursor: pointer; }
 .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: 40px; }
 .slider::-moz-range-thumb { width: 0; height: 40px; border: 0; }
 .slider:focus-visible { outline: 2px solid var(--accent); }
-.walls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.walls { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.walls .auto { display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  background: conic-gradient(from 200deg, #6fdcc1, #79aefc, #a796ff, #ffae6b, #6fdcc1); }
 .walls button { aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; }
 .walls button[aria-pressed="true"] { border-color: var(--fg); }
 .timer-row { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -439,6 +497,25 @@ button { cursor: pointer; }
       <button class="btn primary" type="submit">Ajouter</button>
     </form>
   </section>
+  <section class="w moods" data-id="moods" aria-label="Scènes">
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
+    <h2 class="label"><span>Scènes</span></h2>
+    <div class="mood-row">
+      <button class="mood film" type="button" data-scene="film">
+        <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18M7 5l2 4M12 5l2 4M17 5l2 4"/></svg></span>
+        <span class="mt">Soirée film</span><span class="ms">Lampe 25 %, puis Netflix</span>
+      </button>
+      <button class="mood reveil" type="button" data-scene="reveil">
+        <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 6V3M5.6 9.6 3.5 7.5M18.4 9.6l2.1-2.1M2 14h2M20 14h2"/></svg></span>
+        <span class="mt">Réveil</span><span class="ms">Lampe 100 % et météo</span>
+      </button>
+      <button class="mood dodo" type="button" data-scene="dodo">
+        <span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/><path d="M16 4h3l-3 3h3"/></svg></span>
+        <span class="mt">Dodo</span><span class="ms">Lampe éteinte et veille</span>
+      </button>
+    </div>
+  </section>
+
   <section class="w house span-5" data-id="home" aria-label="Maison">
     <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Maison</span><button class="link-btn" id="houseCfgBtn" type="button">Configurer</button></h2>
@@ -537,6 +614,15 @@ button { cursor: pointer; }
 <div class="dim" id="dim"></div>
 <div class="night" id="night"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="saver" id="saver" aria-hidden="true" role="button" aria-label="Quitter la veille">
+  <div class="saver-bg"><i></i><i></i><i></i></div>
+  <div class="saver-in" id="svIn">
+    <p class="sv-time" id="svTime">--:--</p>
+    <p class="sv-date" id="svDate"></p>
+    <p class="sv-wx" id="svWx" hidden></p>
+  </div>
+  <p class="sv-hint">Touche l'écran pour revenir</p>
+</div>
 
 <script>
 (function () {
@@ -546,6 +632,10 @@ button { cursor: pointer; }
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
   const $ = (id) => document.getElementById(id);
+  document.body.classList.add("booting");
+  setTimeout(() => document.body.classList.remove("booting"), 1800);
+  const NAME = "Mambi";
+  function greetText(h) { return (h >= 5 && h < 12 ? "Bonjour" : h >= 12 && h < 18 ? "Bon après-midi" : "Bonsoir") + " " + NAME; }
   const pad = (n) => String(n).padStart(2, "0");
   const keyOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   let toastT;
@@ -560,7 +650,8 @@ button { cursor: pointer; }
     $("date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
     $("sDate").textContent = now.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
     const h = now.getHours();
-    $("greet").textContent = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
+    $("greet").textContent = greetText(h);
+    if (document.body.classList.contains("saver-on")) fillSaver();
   }
   tick(); setInterval(tick, 1000);
 
@@ -847,12 +938,16 @@ button { cursor: pointer; }
   // ---------- disposition des widgets ----------
   const home = $("home");
   // Disposition : deux colonnes, rangées par l'utilisateur (glisser-déposer ou flèches)
-  const DEFAULT_LAYOUT = { L: ["clock", "video", "music", "custom"], R: ["weather", "agenda", "home"] };
+  const DEFAULT_LAYOUT = { L: ["clock", "moods", "video", "music", "custom"], R: ["weather", "agenda", "home"] };
   const ALL_IDS = [...DEFAULT_LAYOUT.L, ...DEFAULT_LAYOUT.R];
   function cleanLayout(l) {
     const out = { L: [], R: [] }; const seen = new Set();
     ["L", "R"].forEach((k) => ((l && l[k]) || []).forEach((id) => { if (ALL_IDS.includes(id) && !seen.has(id)) { out[k].push(id); seen.add(id); } }));
-    ALL_IDS.forEach((id) => { if (!seen.has(id)) (DEFAULT_LAYOUT.L.includes(id) ? out.L : out.R).push(id); });
+    ALL_IDS.forEach((id) => { // carte nouvelle : on l'insère à sa place par défaut
+      if (seen.has(id)) return;
+      const k = DEFAULT_LAYOUT.L.includes(id) ? "L" : "R";
+      out[k].splice(Math.min(DEFAULT_LAYOUT[k].indexOf(id), out[k].length), 0, id);
+    });
     return out;
   }
   let layout = store.get("tab.layout", null);
@@ -958,6 +1053,12 @@ button { cursor: pointer; }
     toast("Disposition enregistrée");
   }
   document.addEventListener("pointerup", endDrag);
+  home.addEventListener("pointerdown", (e) => {
+    if (document.body.classList.contains("editing") || document.body.classList.contains("booting")) return;
+    const w = e.target.closest(".w"); if (!w) return;
+    w.classList.remove("bump"); void w.offsetWidth; w.classList.add("bump");
+  });
+  home.addEventListener("animationend", (e) => { if (e.animationName === "bump" || e.animationName === "flash") e.target.classList.remove(e.animationName); });
   document.addEventListener("pointercancel", endDrag);
   $("editReset").addEventListener("click", () => { layout = cleanLayout(DEFAULT_LAYOUT); saveLayout(); applyOrder(); toast("Disposition par défaut rétablie"); });
   function setEditing(on) {
@@ -999,7 +1100,7 @@ button { cursor: pointer; }
   function renderWeather(d, loc, at) {
     $("wcity").textContent = loc && loc.name ? "· " + loc.name : "";
     const [ic, label] = wmo(d.current.weather_code);
-    lastWeather = { t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
+    lastWeather = { ic, t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
     const upd = new Date(at);
     let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
       '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
@@ -1152,7 +1253,7 @@ button { cursor: pointer; }
     const now = new Date();
     const parts = [];
     const h = now.getHours();
-    parts.push((h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir") + ".");
+    parts.push(greetText(h) + ".");
     parts.push(hourWords(now).replace(/^i/, "I") + ".");
     parts.push("Nous sommes " + now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + ".");
     if (lastWeather) parts.push("Météo" + (lastWeather.city && lastWeather.city !== "Ma position" ? " à " + lastWeather.city : "") + " : " + lastWeather.t + " degrés, " + lastWeather.label.toLowerCase() + ". Maximum " + lastWeather.max + ", minimum " + lastWeather.min + ".");
@@ -1270,19 +1371,111 @@ button { cursor: pointer; }
     { n: "Aurore", bg: "#0d0a1a", g: ["rgba(200,90,255,.22)", "rgba(255,90,150,.18)", "rgba(90,120,255,.12)"], acc: "#d68bff" },
     { n: "Graphite", bg: "#101113", g: ["rgba(255,255,255,.06)", "rgba(255,255,255,.04)", "rgba(255,255,255,.02)"], acc: "#e8e3d8" }
   ];
-  function setWall(i) {
-    const w = WALLS[i] || WALLS[0]; const r = document.documentElement.style;
+  // Thème « Auto » : frais le matin, bleu en journée, mauve le soir, chaud et sombre après 21 h
+  const PHASES = {
+    matin: { bg: "#081517", g: ["rgba(110,225,200,.22)", "rgba(255,196,150,.16)", "rgba(140,205,255,.10)"], acc: "#6fdcc1" },
+    jour: { bg: "#07111f", g: ["rgba(70,140,255,.24)", "rgba(60,200,255,.16)", "rgba(130,120,255,.10)"], acc: "#79aefc" },
+    soir: { bg: "#0c0c1b", g: ["rgba(125,110,255,.22)", "rgba(255,140,110,.14)", "rgba(80,120,255,.10)"], acc: "#a796ff" },
+    nuit: { bg: "#0e0906", g: ["rgba(255,140,60,.18)", "rgba(190,70,40,.14)", "rgba(255,190,120,.06)"], acc: "#ffae6b" }
+  };
+  function phaseOf(h) { return h >= 5 && h < 11 ? "matin" : h >= 11 && h < 18 ? "jour" : h >= 18 && h < 21 ? "soir" : "nuit"; }
+  let wallMode = store.get("tab.wallMode", "auto");
+  function setWall(i, instant) {
+    wallMode = i;
+    const w = i === "auto" ? PHASES[phaseOf(new Date().getHours())] : (WALLS[i] || WALLS[0]);
+    const r = document.documentElement.style;
+    if (instant) r.setProperty("transition", "none");
     r.setProperty("--bg", w.bg); r.setProperty("--glow-1", w.g[0]); r.setProperty("--glow-2", w.g[1]); r.setProperty("--glow-3", w.g[2]); r.setProperty("--accent", w.acc);
-    [...$("walls").children].forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+    if (instant) requestAnimationFrame(() => requestAnimationFrame(() => r.removeProperty("transition")));
+    [...$("walls").children].forEach((b, j) => b.setAttribute("aria-pressed", String(j === 0 ? i === "auto" : j - 1 === i)));
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", w.bg);
   }
+  (function autoButton() {
+    const b = document.createElement("button"); b.type = "button"; b.className = "auto"; b.textContent = "Auto";
+    b.title = "Selon l'heure"; b.setAttribute("aria-label", "Fond automatique selon l'heure");
+    b.addEventListener("click", () => { setWall("auto"); store.set("tab.wallMode", "auto"); });
+    $("walls").appendChild(b);
+  })();
   WALLS.forEach((w, i) => {
     const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Fond " + w.n); b.title = w.n;
     b.style.background = "radial-gradient(circle at 20% 20%, " + w.g[0].replace(/[\d.]+\)$/, ".9)") + ", transparent 70%), radial-gradient(circle at 80% 90%, " + w.g[1].replace(/[\d.]+\)$/, ".9)") + ", transparent 70%), " + w.bg;
-    b.addEventListener("click", () => { setWall(i); store.set("tab.wall", i); });
+    b.addEventListener("click", () => { setWall(i); store.set("tab.wallMode", i); });
     $("walls").appendChild(b);
   });
-  setWall(store.get("tab.wall", 0));
+  setWall(wallMode, true);
+  setInterval(() => { if (wallMode === "auto") setWall("auto"); }, 60 * 1000);
+
+  // ---------- mode veille ----------
+  const IDLE_MS = 2 * 60 * 1000;
+  let idleT = null;
+  const saverIsOn = () => document.body.classList.contains("saver-on");
+  function fillSaver() {
+    const now = new Date();
+    $("svTime").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+    const ds = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    $("svDate").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+    const wx = $("svWx");
+    if (lastWeather) {
+      wx.innerHTML = ICON[lastWeather.ic] || "";
+      const t = document.createElement("span");
+      t.textContent = lastWeather.t + "° · " + lastWeather.label + (lastWeather.city && lastWeather.city !== "Ma position" ? " · " + lastWeather.city : "");
+      wx.appendChild(t); wx.hidden = false;
+    } else wx.hidden = true;
+  }
+  function shiftSaver() { // petit décalage chaque minute pour ménager l'écran
+    $("svIn").style.transform = "translate(" + ((Math.random() * 2 - 1) * 4).toFixed(1) + "vw," + ((Math.random() * 2 - 1) * 4).toFixed(1) + "vh)";
+  }
+  function showSaver(dodo) {
+    openCC(false); fillSaver(); shiftSaver();
+    $("saver").classList.toggle("dodo", !!dodo);
+    document.body.classList.add("saver-on"); $("saver").setAttribute("aria-hidden", "false");
+  }
+  function hideSaver() { document.body.classList.remove("saver-on"); $("saver").setAttribute("aria-hidden", "true"); resetIdle(); }
+  function busyNow() {
+    const a = document.activeElement;
+    return document.body.classList.contains("editing") || !!drag || document.hidden || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== "range");
+  }
+  function resetIdle() { clearTimeout(idleT); idleT = setTimeout(() => { if (busyNow()) resetIdle(); else showSaver(false); }, IDLE_MS); }
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) => document.addEventListener(ev, () => { if (!saverIsOn()) resetIdle(); }, { passive: true, capture: true }));
+  $("saver").addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); hideSaver(); });
+  document.addEventListener("keydown", (e) => { if (saverIsOn()) { e.preventDefault(); e.stopPropagation(); hideSaver(); } }, true);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !saverIsOn()) resetIdle(); });
+  setInterval(() => { if (saverIsOn()) shiftSaver(); }, 60 * 1000);
+  resetIdle();
+
+  // ---------- scènes ----------
+  const NETFLIX = "https://www.netflix.com";
+  function openLink(url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+  function setLamp(on, level) { house.state = on; if (level) house.level = level; store.set("tab.house", house); renderHouse(); }
+  function showWeather() {
+    const w = W("weather");
+    refreshWx();
+    w.scrollIntoView({ behavior: "smooth", block: "center" });
+    w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash");
+    toast(lastWeather ? greetText(new Date().getHours()) + " · " + lastWeather.t + "° " + lastWeather.label.toLowerCase() : greetText(new Date().getHours()));
+  }
+  async function playScene(kind, btn) {
+    if (btn.classList.contains("busy")) return;
+    btn.classList.add("busy");
+    try {
+      if (kind === "film") {
+        // délai court : le navigateur n'autorise l'ouverture de Netflix que juste après le toucher
+        const ok = await withTimeout(runRoutine(house.levels[25], "lampe 25 %"), 2500);
+        if (ok) setLamp(true, 25);
+        toast("Soirée film : bon film !");
+        openLink(NETFLIX);
+      } else if (kind === "reveil") {
+        if (await runRoutine(house.on, "lampe 100 %")) setLamp(true, 100);
+        showWeather();
+      } else if (kind === "dodo") {
+        if (await runRoutine(house.off, "éteindre")) setLamp(false);
+        toast("Bonne nuit " + NAME);
+        setTimeout(() => showSaver(true), 900);
+      }
+    } finally { btn.classList.remove("busy"); }
+  }
+  document.querySelectorAll("[data-scene]").forEach((b) => b.addEventListener("click", () => playScene(b.dataset.scene, b)));
 
   // minuteur
   let timerEnd = 0, timerInt = null;
