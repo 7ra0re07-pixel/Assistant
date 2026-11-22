@@ -312,6 +312,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 .cfg { display: flex; flex-direction: column; gap: 8px; }
 .cfg label { font-size: 13px; color: var(--muted); }
 .cfg p { margin: 0; font-size: 13px; color: var(--muted); }
+.vm-log { list-style: none; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--glass); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; gap: 4px; }
 .ev-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ev-list li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border-radius: 12px; font-size: 14px; }
 .ev-list .h { color: var(--sky); font-variant-numeric: tabular-nums; font-size: 13px; }
@@ -558,6 +559,8 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
       <label for="lv25">Routine « lampe 25 % » (ID ou lien complet)</label>
       <input class="field" id="lv25" type="text" placeholder="lampe-25-tngfy" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
       <p>Ces réglages restent enregistrés uniquement sur ta tablette. Ne les partage avec personne.</p>
+      <label>Dernières commandes envoyées</label>
+      <ul class="vm-log" id="vmLog"><li>Aucune pour l'instant</li></ul>
       <button class="btn primary" type="submit">Enregistrer</button>
     </form>
   </section>
@@ -828,10 +831,11 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     return /:\/\//.test(v) ? "" : v.replace(/[\s"'`]+/g, "");
   }
   // Lance une routine Voice Monkey : connecteur Claude si dispo, sinon token. Renvoie true si OK.
-  async function runRoutine(value, label, realId) {
+  function runRoutine(value, label, realId) { return enqueue(() => runRoutineNow(value, label, realId)); }
+  async function runRoutineNow(value, label, realId) {
     const dev = realId || deviceId(value);
     if (vmMcp && dev) {
-      try { await vmMcp.callTool("Voicemonkey", "trigger", { routine: dev }); return true; }
+      try { await vmMcp.callTool("Voicemonkey", "trigger", { routine: dev }); logVm(dev, true); return true; }
       catch (e) {
         const c = e && e.code;
         if (c === "tool_error") { toast("Voice Monkey ne trouve pas la routine « " + dev + " ». Crée-la, ou vérifie l'ID dans « Configurer »."); return false; }
@@ -841,7 +845,9 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     }
     const url = triggerUrl(value);
     if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token dans « Configurer »"); return false; }
-    return callVm(url, label);
+    const ok = await callVm(url, label);
+    logVm(dev, ok);
+    return ok;
   }
   // Appel direct à l'API Voice Monkey (appli installée)
   async function callVm(url, label) {
@@ -875,24 +881,25 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
   $("dimTicks").addEventListener("click", (e) => { const b = e.target.closest("[data-lv]"); if (b) setLevel(Number(b.dataset.lv)); });
 
 
-  async function lamp(on) {
+  async function lampNow(on) {
     const dev = deviceId(on ? house.on : house.off);
     if (vmMcp && dev) {
       try {
         await vmMcp.callTool("Voicemonkey", "trigger", { routine: dev });
         house.state = on; if (on) house.level = 100; store.set("tab.house", house); renderHouse();
         toast(on ? "Lampe allumée via Voice Monkey" : "Lampe éteinte via Voice Monkey");
-        return;
+        logVm(dev, true);
+        return true;
       } catch (e) {
         const c = e && e.code;
-        if (c === "tool_error") { toast("Voice Monkey ne trouve pas la routine « " + dev + " ». Vérifie l'ID dans « Configurer »."); return; }
-        if (c === "needs_reauth") { toast("Reconnecte Voice Monkey dans claude.ai → Paramètres → Connecteurs."); return; }
-        if (c === "server_unavailable" || c === "upstream_error") { toast("Voice Monkey ne répond pas pour l'instant. Réessaie dans un moment."); return; }
+        if (c === "tool_error") { toast("Voice Monkey ne trouve pas la routine « " + dev + " ». Vérifie l'ID dans « Configurer »."); logVm(dev, false); return false; }
+        if (c === "needs_reauth") { toast("Reconnecte Voice Monkey dans claude.ai → Paramètres → Connecteurs."); logVm(dev, false); return false; }
+        if (c === "server_unavailable" || c === "upstream_error") { toast("Voice Monkey ne répond pas pour l'instant. Réessaie dans un moment."); logVm(dev, false); return false; }
         // sinon (connecteur non autorisé ou absent) : on passe au token
       }
     }
     const url = triggerUrl(on ? house.on : house.off);
-    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token et les ID dans « Configurer »"); return; }
+    if (!url) { $("houseCfg").hidden = false; toast("Ajoute d'abord ton token et les ID dans « Configurer »"); logVm(dev, false); return false; }
     // 1) essai normal pour lire la réponse de Voice Monkey ; 2) sinon envoi « aveugle »
     let checked = false, okResp = true, why = "";
     try {
@@ -902,13 +909,30 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
       if (!r.ok || (body && body.success === false)) { okResp = false; why = (body && (body.error || body.message)) || ("code " + r.status); }
     } catch (e) {
       try { await fetch(url, { method: "GET", mode: "no-cors" }); }
-      catch (e2) { toast("Impossible de joindre Voice Monkey. Vérifie ta connexion, puis recopie le token et l'ID dans « Configurer »."); return; }
+      catch (e2) { toast("Impossible de joindre Voice Monkey. Vérifie ta connexion, puis recopie le token et l'ID dans « Configurer »."); logVm(dev, false); return false; }
     }
-    if (!okResp) { toast("Voice Monkey a refusé : " + why + ". Vérifie le token et l'ID."); return; }
+    if (!okResp) { toast("Voice Monkey a refusé : " + why + ". Vérifie le token et l'ID."); logVm(dev, false); return false; }
     if (on) house.level = 100;
     house.state = on; store.set("tab.house", house); renderHouse();
     toast((checked ? "Voice Monkey a reçu la commande : " : "Commande envoyée : ") + (on ? "allumer" : "éteindre"));
+    logVm(dev, true);
+    return true;
   }
+  // Une seule commande Voice Monkey à la fois, dans l'ordre où on les demande
+  // (sinon un « lampe 25 % » encore en route pourrait arriver après « éteindre »).
+  let vmQueue = Promise.resolve();
+  function enqueue(fn) { const p = vmQueue.then(fn, fn); vmQueue = p.catch(() => {}); return p; }
+  function lamp(on) { return enqueue(() => lampNow(on)); }
+  // Historique des dernières commandes (visible dans « Configurer »)
+  const vmLog = [];
+  function logVm(dev, ok) {
+    const n = new Date();
+    vmLog.unshift(pad(n.getHours()) + ":" + pad(n.getMinutes()) + ":" + pad(n.getSeconds()) + " · " + (dev || "?") + " · " + (ok ? "OK" : "échec"));
+    vmLog.length = Math.min(vmLog.length, 6);
+    const ul = $("vmLog"); if (!ul) return;
+    ul.replaceChildren(...vmLog.map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
+
   $("lampOn").addEventListener("click", () => lamp(true));
   $("lampOff").addEventListener("click", () => lamp(false));
   $("lampBtn").addEventListener("click", () => lamp(house.state !== true));
@@ -1469,9 +1493,12 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
         if (await runRoutine(house.on, "lampe 100 %")) setLamp(true, 100);
         showWeather();
       } else if (kind === "dodo") {
-        if (await runRoutine(house.off, "éteindre")) setLamp(false);
+        // exactement la même fonction que le bouton « Éteindre » (routine lights-off-mskct)
+        const ok = await lamp(false);
+        if (!ok) return; // la lampe n'a pas confirmé : on reste sur l'accueil pour voir le message
         toast("Bonne nuit " + NAME);
-        setTimeout(() => showSaver(true), 900);
+        await new Promise((r) => setTimeout(r, 2000));
+        showSaver(true);
       }
     } finally { btn.classList.remove("busy"); }
   }
