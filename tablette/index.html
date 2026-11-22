@@ -190,6 +190,9 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 .city-form { display: flex; gap: 8px; flex-wrap: wrap; }
 .city-form .field { flex: 1 1 140px; }
 .wmsg { color: var(--muted); margin: 0; font-size: 14px; }
+.wmsg.warn { color: #ffcf8a; }
+.wx-empty { display: flex; align-items: center; gap: 16px; }
+.wx-empty svg { width: 56px; height: 56px; flex: none; opacity: .55; }
 
 /* ---------- applis ---------- */
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
@@ -237,6 +240,78 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 .mood.dodo { --mood-bg: linear-gradient(150deg, rgba(90,100,220,.34), rgba(20,24,60,.5)); }
 .mood.busy::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.18) 50%, transparent 80%); animation: sweep 1s linear infinite; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* rappels (widget) */
+.rems { display: flex; flex-direction: column; gap: 12px; }
+.rem-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+.rem-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rem-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border-radius: 12px; font-size: 14px; }
+.rem-list .pin { width: 10px; height: 10px; border-radius: 3px; }
+.rem-list .rt { min-width: 0; overflow-wrap: anywhere; }
+.rem-list .rw { display: block; font-size: 12px; color: var(--muted); }
+.rem-list .x { background: none; border: 0; color: var(--muted); font-size: 16px; padding: 0 4px; }
+/* post-it en grand */
+.postits {
+  position: fixed; inset: 0; z-index: 57; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 24px) calc(env(safe-area-inset-bottom, 0px) + 24px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: rgba(6, 8, 14, .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); overflow-y: auto;
+}
+.postits-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.postits-head h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; }
+.postit-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 26px; max-width: 1100px; }
+.postit {
+  width: min(320px, 100%); min-height: 220px; padding: 26px 22px 18px; color: #2b2416; background: var(--pi, #ffe58a);
+  border-radius: 6px 6px 24px 6px; transform: rotate(var(--rot, 0deg)); display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 30px 50px -24px rgba(0,0,0,.75), inset 0 -22px 30px -26px rgba(0,0,0,.3);
+  animation: pop .5s var(--ease) both;
+}
+.postit .pt { margin: 0; flex: 1; font-family: var(--font-display); font-weight: 500; font-size: 28px; line-height: 1.2; overflow-wrap: anywhere; }
+.postit .pm { margin: 0; font-size: 13px; opacity: .7; }
+.postit .done { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; padding: 10px 20px; background: #2b2416; color: #fff7d6; font-weight: 600; font-size: 15px; }
+.postit .done svg { width: 16px; height: 16px; }
+.postit.out { animation: popout .35s var(--ease) forwards; }
+@keyframes pop { from { transform: rotate(var(--rot, 0deg)) translateY(24px) scale(.86); opacity: 0; } }
+@keyframes popout { to { transform: rotate(var(--rot, 0deg)) translateY(-24px) scale(.9); opacity: 0; } }
+/* résumé du matin */
+.mcard {
+  position: fixed; z-index: 58; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px)); padding: 22px 24px; border-radius: 26px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--glass-strong); border: 1px solid var(--line); backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.85); animation: drop .55s var(--ease) both;
+}
+@keyframes drop { from { transform: translate(-50%, -16px); opacity: 0; } }
+.mcard h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 26px; }
+.mcard p { margin: 0; font-size: 15px; color: var(--fg); }
+.mcard .adv { align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--fg); font-size: 14px; }
+.mcard .mc-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); font-size: 16px; }
+/* suggestion selon l'heure */
+.suggest {
+  position: fixed; z-index: 58; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  width: min(580px, calc(100% - 32px)); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 14px 14px 18px;
+  border-radius: 24px; background: var(--glass-strong); border: 1px solid var(--line);
+  backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%); box-shadow: 0 24px 60px -24px rgba(0,0,0,.85);
+  animation: lift .45s var(--ease) both;
+}
+@keyframes lift { from { transform: translate(-50%, 16px); opacity: 0; } }
+.suggest .sg-ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 26%, transparent); flex: none; }
+.suggest .sg-ic svg { width: 24px; height: 24px; }
+.suggest .sg-tx { flex: 1 1 180px; min-width: 0; font-size: 15px; }
+.suggest .sg-tx b { display: block; font-family: var(--font-display); font-weight: 500; font-size: 18px; }
+.suggest .sg-act { display: flex; gap: 8px; }
+.suggest .cd { --p: 1; width: 48px; height: 48px; border-radius: 50%; flex: none; display: grid; place-items: center; font-family: var(--font-display); font-size: 20px; font-variant-numeric: tabular-nums;
+  background: radial-gradient(closest-side, var(--glass-strong) 78%, transparent 80% 100%), conic-gradient(var(--accent) calc(var(--p) * 360deg), var(--glass-hi) 0); }
+/* écoute vocale */
+.listen {
+  position: fixed; z-index: 59; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  max-width: calc(100% - 32px); display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; border-radius: 999px;
+  background: var(--glass-strong); border: 1px solid var(--line); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+.listen .lm { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); flex: none; animation: ping 1.3s ease-out infinite; }
+.listen .lm svg { width: 20px; height: 20px; }
+.listen span { min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+.dock .sys.on { background: var(--accent); color: var(--accent-ink); }
 
 /* mode veille */
 .saver {
@@ -517,6 +592,17 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     </div>
   </section>
 
+  <section class="w rems" data-id="rems" aria-label="Rappels">
+    <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
+    <h2 class="label"><span>Rappels</span><button class="link-btn" id="remShow" type="button">Voir en grand</button></h2>
+    <form class="rem-form" id="remForm" autocomplete="off">
+      <input class="field" id="remText" type="text" maxlength="120" placeholder="Ex. : sortir la poubelle" aria-label="Texte du rappel" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+      <input class="field" id="remTime" type="time" aria-label="Heure du rappel (facultatif)">
+      <button class="btn primary" type="submit">Ajouter</button>
+    </form>
+    <ul class="rem-list" id="remList"></ul>
+  </section>
+
   <section class="w house span-5" data-id="home" aria-label="Maison">
     <div class="move"><button class="grip" type="button" aria-label="Déplacer ce widget">⠿ Déplacer</button><button type="button" data-mv="-1" aria-label="Monter">↑</button><button type="button" data-mv="1" aria-label="Descendre">↓</button><button class="sw" type="button" data-sw="1" aria-label="Changer de colonne">⇄</button></div>
     <h2 class="label"><span>Maison</span><button class="link-btn" id="houseCfgBtn" type="button">Configurer</button></h2>
@@ -607,7 +693,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     </div>
     <div class="cc-card s4">
       <p class="cc-h"><span>Synthèse vocale</span></p>
-      <div class="voice-row"><span>Lire le résumé à chaque ouverture le matin</span><button class="switch" id="morningSw" type="button" role="switch" aria-checked="false" aria-label="Résumé du matin automatique"></button></div>
+      <div class="voice-row"><span>Résumé du matin au premier toucher de la journée (avec la lampe à 25 %)</span><button class="switch" id="morningSw" type="button" role="switch" aria-checked="true" aria-label="Résumé du matin automatique"></button></div>
       <div class="voice-row" style="margin-top:12px"><span>Vitesse de la voix</span><input id="rate" type="range" min="0.7" max="1.4" step="0.1" value="1" aria-label="Vitesse de la voix" style="width:50%"></div>
     </div>
   </div>
@@ -617,6 +703,22 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
 <div class="dim" id="dim"></div>
 <div class="night" id="night"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="postits" id="postits" hidden role="dialog" aria-label="Rappels">
+  <div class="postits-head"><h2>Tes rappels</h2><button class="btn" type="button" id="remLater">Plus tard (10 min)</button></div>
+  <div class="postit-grid" id="postitGrid"></div>
+</div>
+<div class="mcard" id="mcard" hidden role="status">
+  <button class="mc-x" type="button" id="mcardX" aria-label="Fermer">×</button>
+  <h3 id="mcTitle">Bonjour</h3>
+  <p id="mcWx"></p>
+  <p class="adv" id="mcAdv" hidden></p>
+  <p id="mcEv"></p>
+</div>
+<div class="suggest" id="suggest" hidden role="alertdialog" aria-live="polite"></div>
+<div class="listen" id="listen" hidden role="status" aria-live="polite">
+  <span class="lm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+  <span id="heard">Je t'écoute…</span>
+</div>
 <div class="saver" id="saver" aria-hidden="true" role="button" aria-label="Quitter la veille">
   <div class="saver-bg"><i></i><i></i><i></i></div>
   <div class="saver-in" id="svIn">
@@ -730,6 +832,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
   // ---------- dock ----------
   const SYS = {
     speak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
     cc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>'
   };
   (function buildDock() {
@@ -739,8 +842,8 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
       l.appendChild(icon(a)); d.appendChild(l);
     });
     const sep = document.createElement("span"); sep.className = "sep"; d.appendChild(sep);
-    [["speak", "Écouter mon résumé", () => speakSummary()], ["cc", "Centre de contrôle", () => openCC(true)]].forEach(([k, label, fn]) => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "dk"; b.setAttribute("aria-label", label); b.title = label;
+    [["mic", "Commande vocale", () => startVoice()], ["speak", "Écouter mon résumé", () => speakSummary()], ["cc", "Centre de contrôle", () => openCC(true)]].forEach(([k, label, fn]) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "dk"; b.dataset.k = k; b.setAttribute("aria-label", label); b.title = label;
       const ic = document.createElement("span"); ic.className = "ic sys"; ic.innerHTML = SYS[k]; b.appendChild(ic);
       b.addEventListener("click", fn); d.appendChild(b);
     });
@@ -962,7 +1065,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
   // ---------- disposition des widgets ----------
   const home = $("home");
   // Disposition : deux colonnes, rangées par l'utilisateur (glisser-déposer ou flèches)
-  const DEFAULT_LAYOUT = { L: ["clock", "moods", "video", "music", "custom"], R: ["weather", "agenda", "home"] };
+  const DEFAULT_LAYOUT = { L: ["clock", "moods", "video", "music", "custom"], R: ["weather", "agenda", "rems", "home"] };
   const ALL_IDS = [...DEFAULT_LAYOUT.L, ...DEFAULT_LAYOUT.R];
   function cleanLayout(l) {
     const out = { L: [], R: [] }; const seen = new Set();
@@ -1116,78 +1219,117 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     return ["storm", "Orage"];
   }
   let lastWeather = null;
-  function showCityForm(msg) {
-    $("cityForm").hidden = false;
-    if (msg) { const p = document.createElement("p"); p.className = "wmsg"; p.textContent = msg; $("wbody").replaceChildren(p); }
+  // État de la météo : on n'efface JAMAIS une météo affichée ; en cas d'échec on garde
+  // la dernière connue (avec l'heure) et on réessaie toutes les 10 minutes.
+  let wxShown = false, wxBusy = false, wxFailed = false, wxRetry = null, wxNextTry = 0;
+  const WX_RETRY_MS = 10 * 60 * 1000, WX_REFRESH_MS = 30 * 60 * 1000, WX_TIMEOUT_MS = 12000;
+  const hm = (t) => { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  function wxWhen(at) {
+    const d = new Date(at), y = new Date(); y.setDate(y.getDate() - 1);
+    if (keyOf(d) === keyOf(new Date())) return "à " + hm(at);
+    if (keyOf(d) === keyOf(y)) return "hier à " + hm(at);
+    return "le " + d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " à " + hm(at);
   }
-  let wxRetry = null, wxShown = false;
+  function wxStatus(text, warn) { const u = $("wUpd"); if (u) { u.textContent = text; u.classList.toggle("warn", !!warn); } }
+  function showCityForm(msg) { $("cityForm").hidden = false; if (msg) toast(msg); } // ne remplace plus la météo
+  function validWx(d) { return !!(d && d.current && typeof d.current.temperature_2m === "number" && d.daily && Array.isArray(d.daily.time) && d.daily.time.length); }
   function renderWeather(d, loc, at) {
     $("wcity").textContent = loc && loc.name ? "· " + loc.name : "";
     const [ic, label] = wmo(d.current.weather_code);
-    lastWeather = { ic, t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
-    const upd = new Date(at);
+    lastWeather = { ic, dayIc: wmo(d.daily.weather_code[0])[0], t: Math.round(d.current.temperature_2m), label, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]), city: loc && loc.name };
     let html = '<div class="wnow">' + ICON[ic] + '<div><p class="wtemp">' + lastWeather.t + '°</p>' +
       '<p class="wdesc">' + label + " · vent " + Math.round(d.current.wind_speed_10m) + " km/h · humidité " + d.current.relative_humidity_2m + "%</p></div></div>";
     html += '<div class="wdays">';
     d.daily.time.forEach((t, i) => {
       const day = new Date(t + "T12:00");
-      const isToday = keyOf(day) === keyOf(new Date());
-      const lbl = isToday ? "Auj." : day.toLocaleDateString("fr-FR", { weekday: "short" });
+      const lbl = keyOf(day) === keyOf(new Date()) ? "Auj." : day.toLocaleDateString("fr-FR", { weekday: "short" });
       html += '<div class="wday"><div class="d">' + lbl + "</div>" + ICON[wmo(d.daily.weather_code[i])[0]] +
         '<div class="t">' + Math.round(d.daily.temperature_2m_max[i]) + "° <span>" + Math.round(d.daily.temperature_2m_min[i]) + "°</span></div></div>";
     });
-    html += '</div><p class="wmsg" id="wUpd">Mis à jour à ' + pad(upd.getHours()) + ":" + pad(upd.getMinutes()) + "</p>";
+    html += '</div><p class="wmsg" id="wUpd"></p>';
     $("wbody").innerHTML = html;
+    wxStatus("Mis à jour " + wxWhen(at));
     $("sWeather").textContent = lastWeather.t + "° " + label.toLowerCase();
     $("cityForm").hidden = true;
     wxShown = true;
     relayout();
   }
-  async function loadWeather(loc) {
-    clearTimeout(wxRetry);
+  function renderWxPlaceholder(msg) {
+    if (wxShown) { wxStatus(msg, true); return; }
+    $("wbody").innerHTML = '<div class="wx-empty">' + ICON.cloud + '<p class="wmsg warn" id="wUpd"></p></div>';
+    wxStatus(msg, true);
+  }
+  async function fetchWx(loc) {
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
+      "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5";
+    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), WX_TIMEOUT_MS);
     try {
-      const url = "https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon +
-        "&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5";
-      const r = await fetch(url); if (!r.ok) throw new Error();
+      const r = await fetch(url, { signal: ctl.signal, cache: "no-store" });
+      if (!r.ok) { const e = new Error("http"); e.why = r.status === 429 ? "service météo surchargé" : "service météo indisponible"; throw e; }
       const d = await r.json();
+      if (!validWx(d)) { const e = new Error("bad"); e.why = "réponse incomplète"; throw e; }
+      return d;
+    } catch (e) {
+      if (e.name === "AbortError") e.why = "délai dépassé";
+      else if (!e.why) e.why = navigator.onLine === false ? "pas de connexion" : "connexion impossible";
+      throw e;
+    } finally { clearTimeout(tm); }
+  }
+  async function loadWeather(loc) {
+    if (!loc || wxBusy) return;
+    wxBusy = true; clearTimeout(wxRetry);
+    try {
+      const d = await fetchWx(loc);
       const at = Date.now();
       store.set("tab.wx", { d, loc, at });
+      wxFailed = false;
       renderWeather(d, loc, at);
     } catch (e) {
-      // on garde la dernière météo affichée et on réessaie dans 2 minutes
-      wxRetry = setTimeout(() => loadWeather(loc), 2 * 60 * 1000);
-      if (wxShown) { const u = $("wUpd"); if (u && !/hors ligne/.test(u.textContent)) u.textContent += " · hors ligne, nouvel essai bientôt"; return; }
-      showCityForm("La météo n'a pas pu se charger. Vérifie internet : la page réessaie toute seule. Dans le lien Claude, la météo est bloquée, utilise l'appli installée.");
-    }
+      wxFailed = true; wxNextTry = Date.now() + WX_RETRY_MS;
+      wxRetry = setTimeout(() => loadWeather(store.get("tab.loc", loc)), WX_RETRY_MS);
+      const c = store.get("tab.wx", null);
+      const again = "nouvel essai à " + hm(wxNextTry);
+      if (wxShown && c) wxStatus("Dernière mise à jour " + wxWhen(c.at) + " · " + e.why + " · " + again, true);
+      else renderWxPlaceholder(framed ? "Dans le lien Claude, la météo est bloquée : ouvre l'appli installée pour l'avoir." : "Météo indisponible pour l'instant (" + e.why + ") · " + again);
+    } finally { wxBusy = false; }
   }
   async function findCity(q) {
     try {
       const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=fr&name=" + encodeURIComponent(q));
       const d = await r.json();
-      if (!d.results || !d.results.length) { showCityForm("Ville introuvable. Vérifie l'orthographe."); return; }
+      if (!d.results || !d.results.length) { toast("Ville introuvable. Vérifie l'orthographe."); return; }
       const c = d.results[0]; const loc = { lat: c.latitude, lon: c.longitude, name: c.name };
-      store.set("tab.loc", loc); loadWeather(loc);
-    } catch (e) { showCityForm("La recherche de ville n'est pas disponible ici. Ouvre la page dans Chrome sur ta tablette."); }
+      store.set("tab.loc", loc); wxBusy = false; loadWeather(loc);
+    } catch (e) { toast("Recherche de ville impossible pour l'instant. Réessaie dans un moment."); }
   }
   function useGeo() {
     if (!navigator.geolocation) { showCityForm("Indique ta ville pour voir la météo."); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => { const loc = { lat: p.coords.latitude.toFixed(3), lon: p.coords.longitude.toFixed(3), name: "Ma position" }; store.set("tab.loc", loc); loadWeather(loc); },
-      () => showCityForm("Indique ta ville pour voir la météo."), { timeout: 8000 });
+      () => showCityForm(wxShown ? "Position introuvable. Tu peux taper ta ville." : ""), { timeout: 8000 });
   }
   $("cityForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("cityInput").value.trim(); if (q) findCity(q); });
   $("geoBtn").addEventListener("click", useGeo);
   $("wchange").addEventListener("click", () => { $("cityForm").hidden = !$("cityForm").hidden; if (!$("cityForm").hidden) $("cityInput").focus(); });
+  // Demande à Android de ne pas effacer les données de la page (ville, dernière météo, réglages)
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
   const savedLoc = store.get("tab.loc", null);
   const cachedWx = store.get("tab.wx", null);
-  if (cachedWx && cachedWx.d && cachedWx.d.current) { try { renderWeather(cachedWx.d, cachedWx.loc || savedLoc, cachedWx.at); } catch (e) {} }
-  if (savedLoc) loadWeather(savedLoc); else if (cachedWx && cachedWx.loc) { store.set("tab.loc", cachedWx.loc); loadWeather(cachedWx.loc); } else useGeo();
+  if (cachedWx && validWx(cachedWx.d)) { try { renderWeather(cachedWx.d, cachedWx.loc || savedLoc, cachedWx.at); } catch (e) {} }
+  const startLoc = savedLoc || (cachedWx && cachedWx.loc);
+  if (startLoc) { if (!savedLoc) store.set("tab.loc", startLoc); loadWeather(startLoc); }
+  else { renderWxPlaceholder("Indique ta ville, ou touche « Ma position », pour voir la météo."); $("cityForm").hidden = false; useGeo(); }
   const refreshWx = () => { const l = store.get("tab.loc", null); if (l) loadWeather(l); };
-  setInterval(refreshWx, 30 * 60 * 1000);
+  // vérification chaque minute : réessai 10 min après un échec, sinon actualisation toutes les 30 min
+  setInterval(() => {
+    const c = store.get("tab.wx", null);
+    if (wxFailed ? Date.now() >= wxNextTry : !c || Date.now() - c.at >= WX_REFRESH_MS) refreshWx();
+  }, 60 * 1000);
   window.addEventListener("online", refreshWx);
   document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
     const c = store.get("tab.wx", null);
-    if (!document.hidden && (!c || Date.now() - c.at > 15 * 60 * 1000)) refreshWx();
+    if (wxFailed || !c || Date.now() - c.at > 15 * 60 * 1000) refreshWx();
   });
 
   // ---------- agenda ----------
@@ -1323,19 +1465,52 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
   $("speakBtn").addEventListener("click", speakSummary);
   if (window.speechSynthesis) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) {} }
 
-  // résumé du matin : au premier toucher de la journée, entre 5 h et 11 h
-  let morning = store.get("tab.morning", false);
+  // ---------- résumé du matin : au premier toucher de la journée (5 h – 12 h) ----------
+  let morning = store.get("tab.morning2", true);
   const sw = $("morningSw");
   sw.setAttribute("aria-checked", String(morning));
-  sw.addEventListener("click", () => { morning = !morning; store.set("tab.morning", morning); sw.setAttribute("aria-checked", String(morning)); toast(morning ? "Résumé du matin activé" : "Résumé du matin désactivé"); });
-  document.addEventListener("pointerdown", function morningOnce(e) {
+  sw.addEventListener("click", () => { morning = !morning; store.set("tab.morning2", morning); sw.setAttribute("aria-checked", String(morning)); toast(morning ? "Résumé du matin activé" : "Résumé du matin désactivé"); });
+  function weatherAdvice(w) {
+    if (!w) return "";
+    const a = [], sky = w.dayIc || w.ic;
+    if (sky === "storm") a.push("Des orages sont prévus, reste prudent.");
+    else if (sky === "snow") a.push("Il neige : couvre-toi bien et attention en marchant.");
+    else if (sky === "rain") a.push("Il va pleuvoir, n'oublie pas ton parapluie.");
+    if (w.max <= 5) a.push("Il fait très froid, pense à ton manteau, ton bonnet et tes gants.");
+    else if (w.max <= 12) a.push("Il fait froid, pense à ta veste.");
+    else if (w.max <= 17) a.push("Il fait frais, prends une petite veste.");
+    else if (w.max >= 28) a.push("Il va faire chaud, pense à boire de l'eau.");
+    return a.join(" ");
+  }
+  function morningParts() {
+    const w = lastWeather;
+    const wx = w ? "Il fait " + w.t + " degrés" + (w.city && w.city !== "Ma position" ? " à " + w.city : "") + ", " + w.label.toLowerCase() + ", avec " + w.max + " degrés au plus chaud." : "Je n'ai pas encore la météo du jour.";
+    const ev = todayEvents().filter((e) => !/\(exemple\)/.test(e.t));
+    const evTxt = ev.length ? "Aujourd'hui, " + (ev.length > 1 ? "tu as " + ev.length + " rendez-vous : " : "tu as un rendez-vous : ") +
+      ev.map((e) => (e.h ? "à " + e.h.replace(":", " h ").replace(/ h 00$/, " h") + ", " : "") + e.t).join(" ; ") + "." : "Tu n'as aucun rendez-vous aujourd'hui.";
+    return { title: greetText(new Date().getHours()), wx, adv: weatherAdvice(w), ev: evTxt };
+  }
+  let mcardT;
+  function showMorningCard(p) {
+    $("mcTitle").textContent = p.title; $("mcWx").textContent = p.wx; $("mcEv").textContent = p.ev;
+    $("mcAdv").textContent = p.adv; $("mcAdv").hidden = !p.adv;
+    $("mcard").hidden = false; clearTimeout(mcardT); mcardT = setTimeout(() => { $("mcard").hidden = true; }, 30000);
+  }
+  $("mcardX").addEventListener("click", () => { $("mcard").hidden = true; stopSpeak(); });
+  function morningSummary() {
+    const p = morningParts();
+    showMorningCard(p);
+    say([p.title + ".", p.wx, p.adv, p.ev, "J'allume la lampe en douceur."].filter(Boolean).join(" "));
+    runRoutine(house.levels[25], "lampe 25 %").then((ok) => { if (ok) setLamp(true, 25); });
+  }
+  document.addEventListener("pointerdown", (e) => {
     if (!morning) return;
-    const now = new Date(); const k = keyOf(now);
-    if (now.getHours() < 5 || now.getHours() >= 11 || store.get("tab.morningDone", "") === k) return;
-    if (e.target.closest("a, button, input")) return;
+    const now = new Date(), k = keyOf(now);
+    if (now.getHours() < 5 || now.getHours() >= 12 || store.get("tab.morningDone", "") === k) return;
+    if (e.target.closest("a, button, input, .postits, .suggest")) return; // un vrai bouton garde son action
     store.set("tab.morningDone", k);
-    setTimeout(() => say(buildSummary()), 150);
-  });
+    morningSummary();
+  }, true);
 
   // ---------- centre de contrôle ----------
   function openCC(on) {
@@ -1479,7 +1654,7 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash");
     toast(lastWeather ? greetText(new Date().getHours()) + " · " + lastWeather.t + "° " + lastWeather.label.toLowerCase() : greetText(new Date().getHours()));
   }
-  async function playScene(kind, btn) {
+  async function playScene(kind, btn, fromVoice) {
     if (btn.classList.contains("busy")) return;
     btn.classList.add("busy");
     try {
@@ -1487,8 +1662,10 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
         // délai court : le navigateur n'autorise l'ouverture de Netflix que juste après le toucher
         const ok = await withTimeout(runRoutine(house.levels[25], "lampe 25 %"), 2500);
         if (ok) setLamp(true, 25);
-        toast("Soirée film : bon film !");
-        openLink(NETFLIX);
+        store.set("tab.filmDay", keyOf(new Date()));
+        if (fromVoice) { // après la voix, le navigateur refuse d'ouvrir Netflix tout seul : un toucher suffit
+          showSuggest({ icon: SG_IC.film, title: "Netflix est prêt", text: "Touche pour lancer ta soirée film.", actions: [["Ouvrir Netflix", () => { hideSuggest(); openLink(NETFLIX); }, true], ["Fermer", hideSuggest]] });
+        } else { toast("Soirée film : bon film !"); openLink(NETFLIX); }
       } else if (kind === "reveil") {
         if (await runRoutine(house.on, "lampe 100 %")) setLamp(true, 100);
         showWeather();
@@ -1503,6 +1680,213 @@ body.booting .w { animation: rise .75s var(--ease) both; animation-delay: calc(v
     } finally { btn.classList.remove("busy"); }
   }
   document.querySelectorAll("[data-scene]").forEach((b) => b.addEventListener("click", () => playScene(b.dataset.scene, b)));
+
+  // ---------- rappels en post-it ----------
+  let rems = store.get("tab.rems", []);
+  const notified = new Set(store.get("tab.remNotified", []));
+  let snoozeUntil = 0;
+  const PI = ["#ffe58a", "#ffc2d1", "#bff0d4", "#c6dcff", "#ffd6a8"];
+  const piOf = (id) => PI[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % PI.length];
+  const saveRems = () => store.set("tab.rems", rems);
+  let audioCtx = null;
+  function softSound(kind) { // petit son discret (WebAudio, volume bas)
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const notes = kind === "done" ? [[660, 0]] : [[880, 0], [1320, 0.16]];
+      notes.forEach(([f, t]) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+        const t0 = audioCtx.currentTime + t;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(kind === "done" ? 0.04 : 0.06, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5); o.start(t0); o.stop(t0 + 0.55);
+      });
+    } catch (e) {}
+  }
+  function remWhen(r) {
+    if (!r.time) return "dès maintenant";
+    const d = new Date(r.due), t = new Date(); t.setDate(t.getDate() + 1);
+    const day = keyOf(d) === keyOf(new Date()) ? "aujourd'hui" : keyOf(d) === keyOf(t) ? "demain" : d.toLocaleDateString("fr-FR", { weekday: "long" });
+    return day + " à " + hm(r.due);
+  }
+  function renderRemList() {
+    const ul = $("remList"); ul.replaceChildren();
+    const list = rems.slice().sort((a, b) => a.due - b.due);
+    if (!list.length) { const p = document.createElement("p"); p.className = "ev-empty"; p.textContent = "Aucun rappel. Ajoute-en un : il s'affichera en grand le moment venu."; ul.appendChild(p); return; }
+    list.forEach((r) => {
+      const li = document.createElement("li");
+      const pin = document.createElement("span"); pin.className = "pin"; pin.style.background = piOf(r.id);
+      const tx = document.createElement("span"); tx.className = "rt"; tx.textContent = r.text;
+      const w = document.createElement("span"); w.className = "rw"; w.textContent = r.due <= Date.now() ? "à faire maintenant" : remWhen(r); tx.appendChild(w);
+      const x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "Supprimer " + r.text);
+      x.addEventListener("click", () => { rems = rems.filter((z) => z.id !== r.id); saveRems(); renderRemList(); checkRems(true); });
+      li.append(pin, tx, x); ul.appendChild(li);
+    });
+  }
+  function renderPostits(due) {
+    const g = $("postitGrid"); g.replaceChildren();
+    due.forEach((r, i) => {
+      const card = document.createElement("article"); card.className = "postit";
+      card.style.setProperty("--pi", piOf(r.id)); card.style.setProperty("--rot", (i % 2 ? 1.6 : -1.4) + "deg"); card.style.animationDelay = i * 70 + "ms";
+      const t = document.createElement("p"); t.className = "pt"; t.textContent = r.text;
+      const m = document.createElement("p"); m.className = "pm"; m.textContent = r.time ? "Rappel de " + r.time : "Rappel";
+      const b = document.createElement("button"); b.className = "done"; b.type = "button";
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Fait';
+      b.addEventListener("click", () => {
+        softSound("done"); card.classList.add("out");
+        setTimeout(() => { rems = rems.filter((z) => z.id !== r.id); saveRems(); renderRemList(); checkRems(true); }, 340);
+      });
+      card.append(t, m, b); g.appendChild(card);
+    });
+  }
+  function checkRems(force) {
+    const now = Date.now();
+    const due = rems.filter((r) => r.due <= now).sort((a, b) => a.due - b.due);
+    let fresh = false;
+    due.forEach((r) => { if (!notified.has(r.id)) { notified.add(r.id); fresh = true; } });
+    if (fresh) store.set("tab.remNotified", [...notified].slice(-60));
+    if (!due.length) { $("postits").hidden = true; renderRemList(); return; }
+    if (!fresh && !force && (now < snoozeUntil || !$("postits").hidden)) { renderRemList(); return; } // déjà affichés, ou « plus tard »
+    if (fresh) { snoozeUntil = 0; softSound("new"); if (saverIsOn()) hideSaver(); }
+    renderPostits(due); $("postits").hidden = false;
+    renderRemList();
+  }
+  $("remForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = $("remText").value.trim(); if (!text) return;
+    const time = $("remTime").value;
+    let due = Date.now();
+    if (time) {
+      const [h, m] = time.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0);
+      if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+      due = d.getTime();
+    }
+    rems.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text, time, due });
+    saveRems(); $("remText").value = ""; $("remTime").value = "";
+    toast(time ? "Rappel prévu " + remWhen(rems[rems.length - 1]) : "Rappel ajouté");
+    checkRems(); renderRemList();
+  });
+  $("remLater").addEventListener("click", () => { snoozeUntil = Date.now() + 10 * 60 * 1000; $("postits").hidden = true; toast("Je te le rappelle dans 10 minutes"); });
+  $("remShow").addEventListener("click", () => { if (rems.some((r) => r.due <= Date.now())) checkRems(true); else toast("Aucun rappel à faire pour l'instant"); });
+  renderRemList();
+  setInterval(() => checkRems(false), 15 * 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkRems(false); });
+  setTimeout(() => checkRems(false), 2500);
+
+  // ---------- suggestions selon l'heure ----------
+  const SG_IC = {
+    film: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18M7 5l2 4M12 5l2 4M17 5l2 4"/></svg>',
+    dodo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'
+  };
+  let cdTimer = null;
+  function hideSuggest() { clearInterval(cdTimer); cdTimer = null; $("suggest").hidden = true; }
+  function showSuggest({ icon, title, text, actions, countdown, onEnd }) {
+    clearInterval(cdTimer);
+    const el = $("suggest"); el.replaceChildren();
+    const ic = document.createElement("span"); ic.className = "sg-ic"; ic.innerHTML = icon;
+    const tx = document.createElement("div"); tx.className = "sg-tx";
+    const b = document.createElement("b"); b.textContent = title; const sp = document.createElement("span"); sp.textContent = text; tx.append(b, sp);
+    el.append(ic, tx);
+    if (countdown) {
+      const cd = document.createElement("span"); cd.className = "cd"; cd.textContent = countdown; el.appendChild(cd);
+      let left = countdown;
+      cdTimer = setInterval(() => {
+        left -= 1; cd.textContent = Math.max(left, 0); cd.style.setProperty("--p", Math.max(left, 0) / countdown);
+        if (left <= 0) { hideSuggest(); onEnd && onEnd(); }
+      }, 1000);
+    }
+    const act = document.createElement("div"); act.className = "sg-act";
+    actions.forEach(([label, fn, primary]) => { const bt = document.createElement("button"); bt.type = "button"; bt.className = "btn" + (primary ? " primary" : ""); bt.textContent = label; bt.addEventListener("click", fn); act.appendChild(bt); });
+    el.appendChild(act);
+    el.hidden = false;
+  }
+  const sceneBtn = (k) => document.querySelector('[data-scene="' + k + '"]');
+  function nightKey(d) { const x = new Date(d); x.setHours(x.getHours() - 6); return keyOf(x); }
+  function checkSuggest() {
+    if (document.hidden) return;
+    const now = new Date(), h = now.getHours(), m = now.getMinutes(), today = keyOf(now);
+    // vers 21 h : soirée film (une fois par jour, sauf si elle a déjà été lancée)
+    if (h === 21 && m < 45 && store.get("tab.sugFilm", "") !== today && store.get("tab.filmDay", "") !== today && $("suggest").hidden) {
+      store.set("tab.sugFilm", today);
+      showSuggest({ icon: SG_IC.film, title: "Il est 21 h", text: "Une soirée film ? Lampe à 25 % puis Netflix.", actions: [["Lancer", () => { hideSuggest(); playScene("film", sceneBtn("film")); }, true], ["Non merci", hideSuggest]] });
+    }
+    // vers minuit : Dodo avec 10 secondes pour annuler
+    const nk = nightKey(now);
+    if (((h === 23 && m >= 55) || (h === 0 && m < 30)) && store.get("tab.sugDodo", "") !== nk) {
+      store.set("tab.sugDodo", nk);
+      showSuggest({ icon: SG_IC.dodo, title: "Il est bientôt minuit", text: "Mode Dodo : j'éteins la lampe dans 10 secondes.", countdown: 10,
+        onEnd: () => playScene("dodo", sceneBtn("dodo")),
+        actions: [["Annuler", () => { hideSuggest(); toast("D'accord, on reste éveillés"); }], ["Maintenant", () => { hideSuggest(); playScene("dodo", sceneBtn("dodo")); }, true]] });
+    }
+  }
+  setInterval(checkSuggest, 20 * 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkSuggest(); });
+  setTimeout(checkSuggest, 3000);
+
+  // ---------- commande vocale (français) ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let dictCap = null, listening = false, rec = null;
+  const micBtn = () => document.querySelector('.dock [data-k="mic"] .sys');
+  function setHeard(t) { $("heard").textContent = t || "Je t'écoute…"; }
+  function setListening(on) { listening = on; $("listen").hidden = !on; const b = micBtn(); if (b) b.classList.toggle("on", on); if (on) setHeard(""); }
+  if (window.claude && typeof window.claude.use === "function") { // lien Claude : dictée fournie par Claude
+    window.claude.use("dictation").then((d) => {
+      if (!d) return; dictCap = d;
+      d.onPartial(({ text }) => setHeard(text));
+      d.onFinal(({ text }) => { if (text && text.trim()) { setHeard(text); stopVoice(); runVoice([text]); } });
+      d.onState(({ state }) => { if (state !== "listening" && listening && !rec) setListening(false); });
+    }).catch(() => {});
+  }
+  function startVoice() {
+    if (listening) { stopVoice(); return; }
+    if (framed && dictCap) {
+      setListening(true);
+      dictCap.start().catch((e) => { setListening(false); toast(e && e.code === "not_granted" ? "Le micro n'est pas autorisé pour cette page." : "Le micro ne répond pas."); });
+      return;
+    }
+    if (!SR) { toast("La commande vocale n'est pas disponible ici. Utilise l'appli installée dans Chrome."); return; }
+    rec = new SR(); rec.lang = "fr-FR"; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+    rec.onresult = (ev) => {
+      const r = ev.results[ev.results.length - 1];
+      if (r.isFinal) { const alts = Array.from(r).map((a) => a.transcript); setHeard(alts[0]); runVoice(alts); }
+      else setHeard(r[0].transcript);
+    };
+    rec.onerror = (ev) => {
+      const msg = { "not-allowed": "Autorise le micro pour Accueil dans les réglages de Chrome.", "service-not-allowed": "Autorise le micro pour Accueil dans les réglages de Chrome.",
+        "no-speech": "Je n'ai rien entendu. Touche le micro et parle.", "network": "La reconnaissance vocale a besoin d'internet.", "audio-capture": "Aucun micro trouvé." }[ev.error];
+      if (msg) toast(msg);
+    };
+    rec.onend = () => { rec = null; setListening(false); };
+    try { rec.start(); setListening(true); } catch (e) { rec = null; toast("Le micro ne répond pas."); }
+  }
+  function stopVoice() {
+    try { if (rec) rec.stop(); } catch (e) {}
+    try { if (dictCap && !rec) dictCap.stop(); } catch (e) {}
+    setListening(false);
+  }
+  const fold = (t) => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function parseVoice(t) {
+    const n = fold(t);
+    if (/soiree film|\bfilm\b|cinema|netflix/.test(n)) return "film";
+    if (/\breveil|\breveille/.test(n)) return "reveil";
+    if (/\bdodo\b|bonne nuit|dormir|coucher/.test(n)) return "dodo";
+    if (/(\b25\b|vingt[- ]?cinq)/.test(n)) return "l25";
+    if (/(\b100\b|cent pour ?cent|a fond|maximum)/.test(n)) return "l100";
+    if (/eteins|eteint|eteindre|eteigne|coupe la|arrete la (lampe|lumiere)/.test(n)) return "off";
+    if (/allume|allumer/.test(n)) return "on";
+    return null;
+  }
+  function runVoice(alts) {
+    let cmd = null, heard = alts[0] || "";
+    for (const a of alts) { const c = parseVoice(a); if (c) { cmd = c; heard = a; break; } }
+    if (!cmd) { toast("Je n'ai pas compris « " + heard.trim() + " ». Essaie « allume la lampe » ou « dodo »."); return; }
+    const reply = { film: "Soirée film, c'est parti.", reveil: "Bonjour " + NAME + ".", dodo: "Bonne nuit " + NAME + ".", l25: "Lampe à vingt-cinq pour cent.", l100: "Lampe à fond.", off: "J'éteins la lampe.", on: "J'allume la lampe." }[cmd];
+    if (cmd === "film" || cmd === "reveil" || cmd === "dodo") playScene(cmd, sceneBtn(cmd), true);
+    else if (cmd === "l25") setLevel(25);
+    else if (cmd === "l100") setLevel(100);
+    else lamp(cmd === "on");
+    if (cmd !== "dodo") say(reply); else toast(reply);
+  }
+  window.__voiceTest = runVoice; // utilisé pour les tests automatiques
 
   // minuteur
   let timerEnd = 0, timerInt = null;
